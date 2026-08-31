@@ -11,7 +11,7 @@ for SPLIT in routertrain test ood; do
   for N in 255 511; do
     if [ "$SPLIT" = "ood" ] && [ "$N" = 2047 ]; then continue; fi
     python scripts/benchmark.py --split $SPLIT --n $N --tol 1e-8 --weights $W \
-      --pipelines direct,amg_cg,surr_cg,surr_amg,hints \
+      --pipelines direct,amg_cg,surr_cg,surr_mgcg,surr_amg,hints \
       --out runs/bench_${SPLIT}_${N}.parquet
   done
 done
@@ -20,7 +20,7 @@ for SPLIT in routertrain test ood; do
   for N in 1023 2047; do
     if [ "$SPLIT" = "ood" ] && [ "$N" = 2047 ]; then continue; fi
     python scripts/benchmark.py --split $SPLIT --n $N --tol 1e-8 --weights $W \
-      --pipelines direct,amg_cg,surr_cg,surr_amg \
+      --pipelines direct,amg_cg,surr_cg,surr_mgcg,surr_amg \
       --out runs/bench_${SPLIT}_${N}.parquet
   done
 done

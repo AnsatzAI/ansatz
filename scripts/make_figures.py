@@ -22,19 +22,21 @@ RUNS = ROOT / "runs"
 FIGS = ROOT / "paper" / "figs"
 FIGS.mkdir(parents=True, exist_ok=True)
 
-SERIES = ["direct", "amg_cg", "surr_cg", "surr_amg", "hints", "routed"]
+SERIES = ["direct", "amg_cg", "surr_cg", "surr_mgcg", "surr_amg", "hints", "routed"]
 COLOR = {
     "direct": "#2a78d6",
     "amg_cg": "#eb6834",
     "surr_cg": "#1baf7a",
-    "surr_amg": "#eda100",
-    "hints": "#e87ba4",
-    "routed": "#008300",
+    "surr_mgcg": "#eda100",
+    "surr_amg": "#e87ba4",
+    "hints": "#008300",
+    "routed": "#4a3aa7",
 }
 LABEL = {
     "direct": "sparse direct",
     "amg_cg": "AMG-CG (pyamg)",
     "surr_cg": "surrogate + CG",
+    "surr_mgcg": "surrogate + MG-PCG",
     "surr_amg": "surrogate + AMG-CG",
     "hints": "HINTS (fixed 1:16)",
     "routed": "Ansatz router",

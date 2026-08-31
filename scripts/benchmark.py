@@ -16,7 +16,7 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=255)
     ap.add_argument("--tol", type=float, default=1e-8)
     ap.add_argument("--weights", default="runs/unet_255.pt")
-    ap.add_argument("--pipelines", default="direct,amg_cg,surr_cg,surr_amg,hints")
+    ap.add_argument("--pipelines", default="direct,amg_cg,surr_cg,surr_mgcg,surr_amg,hints")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()

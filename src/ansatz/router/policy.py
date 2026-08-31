@@ -31,7 +31,7 @@ from pathlib import Path
 
 import numpy as np
 
-PIPELINES = ["direct", "amg_cg", "surr_cg", "surr_amg", "hints"]
+PIPELINES = ["direct", "amg_cg", "surr_cg", "surr_mgcg", "surr_amg", "hints"]
 
 
 def instance_features(params: np.ndarray, n: int, free_frac: float, tol: float) -> np.ndarray:

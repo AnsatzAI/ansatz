@@ -41,7 +41,7 @@ def run_benchmark(
     limit: int | None = None,
     out: str | Path | None = None,
 ) -> pd.DataFrame:
-    pipelines = pipelines or ["direct", "amg_cg", "surr_cg", "surr_amg", "hints"]
+    pipelines = pipelines or ["direct", "amg_cg", "surr_cg", "surr_mgcg", "surr_amg", "hints"]
     rows = []
     for i, (params, conductors, ground) in enumerate(iter_designs(root, split, n)):
         if limit is not None and i >= limit:

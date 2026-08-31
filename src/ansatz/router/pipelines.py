@@ -67,18 +67,22 @@ class DesignSolveContext:
         return self._predictions
 
 
-def _finish_cg(problem, u, tol, block=40, max_blocks=200, monitor=None, on_escalate=None):
-    cg = ConjugateGradientBlock(iters=block)
+def _finish_iter(problem, u, tol, op, max_blocks=400, budget_s=60.0,
+                 monitor=None, on_escalate=None):
+    """Drive `op` blocks until verified tol, escalation, or time budget."""
     t0 = time.perf_counter()
     for _ in range(max_blocks):
         r = problem.residual_norm(u)
         if r <= tol:
             return u, False
+        elapsed = time.perf_counter() - t0
+        if elapsed > budget_s:
+            return u, False  # verification below will trigger fallback
         if monitor is not None:
-            target = monitor.observe(time.perf_counter() - t0, r, tol)
+            target = monitor.observe(elapsed, r, tol)
             if target is not None and on_escalate is not None:
                 return on_escalate(problem, u), True
-        u = cg(problem, u)
+        u = op(problem, u)
     return u, False
 
 
@@ -105,15 +109,17 @@ def run_pipeline(name: str, ctx: DesignSolveContext, tol: float = 1e-8,
             x = amg.ml.solve(b, tol=tol * 1e-2, accel="cg", maxiter=400)
             fields.append(p.to_grid(x, amg.idx))
 
-    elif name in ("surr_cg", "surr_amg"):
+    elif name in ("surr_cg", "surr_mgcg", "surr_amg"):
+        from ..solvers.krylov import MGPreconditionedCG
+
         preds = ctx.predictions()
         fields = []
         for p, u0 in zip(problems, preds):
             u = p.clamp(u0)
-            if name == "surr_cg":
-                mon = None
-                if alternatives:
-                    mon = EscalationMonitor(alternatives)
+            if name in ("surr_cg", "surr_mgcg"):
+                op = (ConjugateGradientBlock(iters=40) if name == "surr_cg"
+                      else MGPreconditionedCG(iters=5))
+                mon = EscalationMonitor(alternatives) if alternatives else None
 
                 def esc(pp, uu):
                     amg = ctx.amg()
@@ -122,7 +128,8 @@ def run_pipeline(name: str, ctx: DesignSolveContext, tol: float = 1e-8,
                                      maxiter=400)
                     return pp.to_grid(x, amg.idx)
 
-                u, esc_flag = _finish_cg(p, u, tol, monitor=mon, on_escalate=esc)
+                u, esc_flag = _finish_iter(p, u, tol, op, monitor=mon,
+                                           on_escalate=esc)
                 escalated |= esc_flag
             else:
                 amg = ctx.amg()
