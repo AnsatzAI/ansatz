@@ -38,7 +38,7 @@ class XmonDesign:
         px = self.domain / (n + 1)
 
         def um2px(x: float) -> int:
-            return max(int(round(x / px)), 1)
+            return max(round(x / px), 1)
 
         c = n // 2
         arm = um2px(self.cross_length)

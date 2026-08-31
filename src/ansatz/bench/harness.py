@@ -51,7 +51,7 @@ def run_benchmark(
         for name in pipelines:
             ctx = DesignSolveContext(n, fixed, conductors, surrogate=surrogate)
             try:
-                fields, info = run_pipeline(name, ctx, tol=tol)
+                _fields, info = run_pipeline(name, ctx, tol=tol)
                 rows.append(
                     dict(
                         split=split, n=n, design=i, tol=tol, pipeline=name,
