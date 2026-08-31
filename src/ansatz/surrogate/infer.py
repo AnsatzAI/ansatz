@@ -58,3 +58,26 @@ class FieldSurrogate:
         p = LaplaceProblem(n=n, fixed_mask=np.zeros((n, n), bool),
                            fixed_values=np.zeros((n, n)))
         self.predict([p])
+
+
+class MultiResSurrogate:
+    """Route prediction to the checkpoint with the nearest native resolution
+    (at or below the target where possible) — same interface as FieldSurrogate."""
+
+    def __init__(self, weights_by_n: dict[int, str], **kw):
+        self.members = {
+            n: FieldSurrogate(w, native_n=n, **kw)
+            for n, w in sorted(weights_by_n.items())
+        }
+
+    def _pick(self, n: int) -> FieldSurrogate:
+        natives = sorted(self.members)
+        at_or_below = [m for m in natives if m <= n]
+        return self.members[at_or_below[-1] if at_or_below else natives[0]]
+
+    def predict(self, problems: list[LaplaceProblem]) -> list[np.ndarray]:
+        return self._pick(problems[0].n).predict(problems)
+
+    def warmup(self, n: int = 255) -> None:
+        for m in self.members.values():
+            m.warmup(m.native_n)

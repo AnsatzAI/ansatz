@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse
 
 from ansatz.bench.harness import run_benchmark
-from ansatz.surrogate.infer import FieldSurrogate
+from ansatz.surrogate.infer import FieldSurrogate, MultiResSurrogate
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -21,7 +21,14 @@ if __name__ == "__main__":
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
-    surrogate = FieldSurrogate(a.weights)
+    if "," in a.weights:
+        by_n = {}
+        for part in a.weights.split(","):
+            n_str, path = part.split("=")
+            by_n[int(n_str)] = path
+        surrogate = MultiResSurrogate(by_n)
+    else:
+        surrogate = FieldSurrogate(a.weights)
     surrogate.warmup()
     df = run_benchmark(
         a.data, a.split, a.n, surrogate, tol=a.tol,

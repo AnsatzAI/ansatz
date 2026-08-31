@@ -13,7 +13,12 @@ from ansatz.surrogate.infer import FieldSurrogate
 
 
 def main(weights: str, data: str = "data/fields"):
-    s = FieldSurrogate(weights)
+    if "," in weights:
+        from ansatz.surrogate.infer import MultiResSurrogate
+        by_n = {int(p.split("=")[0]): p.split("=")[1] for p in weights.split(",")}
+        s = MultiResSurrogate(by_n)
+    else:
+        s = FieldSurrogate(weights)
     s.warmup()
     for n in (255, 511, 1023):
         errs, res = [], []

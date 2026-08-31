@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-W=runs/unet_255.pt
+W="255=runs/unet_255.pt,511=runs/unet_511.pt"
 
 for SPLIT in routertrain test ood; do
   for N in 255 511; do
