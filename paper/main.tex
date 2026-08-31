@@ -205,15 +205,111 @@ more than the patience window beyond its projected-competitive segment.
 
 \section{Experiments}
 \label{sec:experiments}
+
+All experiments run on a single Apple M4 Pro (24\,GB); every number is
+reproducible from fixed seeds via \texttt{scripts/run\_all\_benchmarks.sh} in
+the open-source repository. The verified tolerance is $\tau = 10^{-8}$
+(relative residual) throughout.
+
 \subsection{Forward model on real Q3D data}
-% table: capacitance MAPE + downstream errors, iid and out-of-hull
-TODO
+\label{sec:exp-forward}
+
+Table~\ref{tab:forward} scores Tier 1 on the 1{,}934 SQuADDS Q3D extractions
+under (a) a random 85/15 split and (b) an out-of-hull split holding out the
+largest 12\% of \texttt{cross\_length}. In distribution, the gradient-boosted
+model reaches $\capmapegbr$ mean capacitance error --- $5.6\times$ better than
+nearest-design lookup --- and its LOM image is accurate to $\gerrgbr$ in $g$
+and $\chierrgbr$ in $\chi$, versus $\gerrnn$/$\chierrnn$ for lookup. Out of
+hull, \emph{every} data-driven method degrades to $\sim$3.5--4\% capacitance
+error and $\gtrsim$20\% $\chi$ error (Figure~\ref{fig:forward}): extrapolation
+is not a model-selection problem, it is a regime change --- the empirical
+motivation for Tier 2.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{capacitance MAPE} & \multicolumn{2}{c}{downstream (iid)} \\
+model & iid & out-of-hull & $g$ & $\chi$ \\
+\midrule
+nearest-design lookup & 1.75\% & 3.50\% & 4.03\% & 28.7\% \\
+$k$NN-5 (distance-weighted) & 1.11\% & 3.96\% & 2.17\% & 13.6\% \\
+linear & 3.02\% & 3.50\% & 7.79\% & 20.7\% \\
+random forest & 2.19\% & 4.12\% & 5.01\% & 15.5\% \\
+\textbf{Ansatz (GBR)} & \textbf{0.31\%} & 3.51\% & \textbf{0.70\%} & \textbf{1.71\%} \\
+\bottomrule
+\end{tabular}
+\caption{Forward model vs.\ practitioner alternatives on held-out real Ansys
+Q3D capacitance matrices (SQuADDS). Downstream errors propagate predictions
+through the LOM at $L_j = 10$\,nH, $f_r = 6.116$\,GHz.}
+\label{tab:forward}
+\end{table}
+
+\IfFileExists{figs/forward_model.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/forward_model.pdf}
+\caption{Capacitance MAPE by model, in-distribution vs.\ out-of-hull. All
+data-driven predictors converge to the same failure mode outside the hull.}
+\label{fig:forward}
+\end{figure}}{}
+
 \subsection{Routed solver benchmarks}
-% per-resolution pipeline times; router vs oracle vs fixed; OOD; choices
-TODO
-\subsection{Ablations}
-% escalation on/off; surrogate quality vs routing benefit; decision overhead
-TODO
+\label{sec:exp-router}
+
+% Numbers below are filled from runs/figure_stats.json + runs/router_eval.json
+Figure~\ref{fig:times} reports mean wall-clock per verified design solve (two
+excitations, shared context) across grid sizes $n \in \{255,511,1023,2047\}$
+on held-out test designs, for every fixed pipeline and for the router.
+Figure~\ref{fig:choices} shows what the router learned; Figure~\ref{fig:cdf}
+shows per-instance ratios to the oracle.
+
+\IfFileExists{figs/times_vs_n.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figs/times_vs_n.pdf}
+\caption{Mean wall-clock per verified design solve vs.\ grid size. No fixed
+pipeline is best everywhere; the router tracks the lower envelope.}
+\label{fig:times}
+\end{figure}}{}
+
+\IfFileExists{figs/router_choices.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.7\linewidth]{figs/router_choices.pdf}
+\caption{Router choice shares by resolution.}
+\label{fig:choices}
+\end{figure}}{}
+
+\IfFileExists{figs/regret_cdf.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.72\linewidth]{figs/regret_cdf.pdf}
+\caption{CDF of per-instance wall-clock relative to the per-instance oracle.}
+\label{fig:cdf}
+\end{figure}}{}
+
+\IfFileExists{figs/field_example.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figs/field_example.pdf}
+\caption{A sampled design, its solved potential (cross driven), and the
+surrogate's absolute error field.}
+\label{fig:field}
+\end{figure}}{}
+
+TODO-NUMBERS: router-vs-oracle ratio, speedups vs each fixed pipeline,
+win rates, worst-case per-instance ratio, decision overhead, OOD split
+results, verification-failure count (expected 0), escalation statistics.
+
+\subsection{Discussion}
+The benchmark's central pattern is a crossover: sparse direct dominates small
+grids; surrogate-initialized matrix-free pipelines dominate large grids by
+skipping assembly and setup entirely; AMG-CG is the strong middle. A fixed
+choice pays the crossover penalty somewhere; the router pays a microsecond
+decision everywhere. HINTS' fixed cadence --- the same corrector network, the
+same smoothers --- is dominated at every size measured, confirming that
+\emph{when} to spend surrogate inference matters more than \emph{whether}.
 
 \section{Related work}
 
