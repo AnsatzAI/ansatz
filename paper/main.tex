@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+
+% ---- result macros (filled by scripts/make_figures.py output) ----
+\newcommand{\capmapegbr}{0.31\%}
+\newcommand{\capmapenn}{1.75\%}
+\newcommand{\gerrgbr}{0.70\%}
+\newcommand{\gerrnn}{4.03\%}
+\newcommand{\chierrgbr}{1.71\%}
+\newcommand{\chierrnn}{28.7\%}
+
+\title{\textbf{Ansatz: Cost-Model Routing for Verified Electromagnetic
+Simulation in Superconducting Qubit Design}}
+\author{Ansatz AI\\ \texttt{contact@useansatz.ai}}
+\date{August 2026 \quad (v0 technical report)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The inner loop of superconducting qubit design is electromagnetic simulation:
+each geometry iterate requires a multi-conductor capacitance extraction whose
+lumped-oscillator reduction yields the Hamiltonian parameters designers
+actually target. We describe the v0 Ansatz engine, which accelerates this loop
+with two coupled components. First, a forward surrogate trained on 1{,}934
+experimentally validated Ansys Q3D capacitance matrices (the SQuADDS database)
+predicts capacitance matrices at microsecond latency, roughly $5\times$ more
+accurately than nearest-design lookup in distribution ($\capmapegbr$ vs.\
+$\capmapenn$ mean absolute percentage error), with downstream coupling and
+dispersive-shift errors of $\gerrgbr$ and $\chierrgbr$. Second, because every
+data-driven predictor degrades outside its training hull, a \emph{routed,
+verified} field-solver answers arbitrary designs: a cost-model router chooses
+per instance among sparse-direct, AMG-preconditioned Krylov,
+surrogate-initialized matrix-free Krylov, and hybrid pipelines, every pipeline
+terminates in residual verification, and a runtime escalation monitor bounds
+the cost of routing mistakes. On geometry distributions anchored to the same
+validated design family, the routed solver tracks the per-instance oracle
+within measurement noise and dominates every fixed pipeline choice as
+resolution varies, while HINTS-style fixed hybrid schedules are never
+competitive. We argue this instance-level, verification-first reformulation of
+learned solver routing --- rather than per-iteration classification or
+uncertainty-quantified surrogation alone --- is the form in which neural
+acceleration becomes deployable in engineering design loops.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+% Design loop context; cost of Q3D/HFSS in the loop; why surrogates alone are
+% not deployable (silent extrapolation failure); why verification-first.
+TODO
+
+\section{Setting}
+\label{sec:setting}
+% Planar transmon family (xmon + claw); electrostatics; capacitance matrix;
+% LOM reduction to (E_C, f_q, alpha, g, chi). Real data: SQuADDS.
+TODO
+
+\section{Method}
+\label{sec:method}
+\subsection{Tier 1: forward surrogate on validated Q3D data}
+TODO
+\subsection{Tier 2: routed, verified field solves}
+% pipelines, shared per-design context, cost-model router, escalation monitor,
+% unconditional verification. Contrast: per-iteration greedy routing
+% (arXiv:2509.24814), HINTS fixed schedules.
+TODO
+
+\subsection{Guardrail properties}
+\begin{proposition}[Verification safety]
+Every field returned by any pipeline satisfies
+$\|b - Au\|_2 / \|b\|_2 \le \tau$ on the target discretization; on
+verification failure the engine falls back to the sparse direct solve, so the
+routed result equals the classical result in the worst case.
+\end{proposition}
+
+\begin{proposition}[Bounded escalation regret]
+Let $t_s$ be the time spent in a monitored pipeline before escalation fires,
+and $T_{\mathrm{alt}}$ the (warm-started) time of the escalation target. The
+routed cost is at most $t_s + T_{\mathrm{alt}}$, where $t_s$ is bounded by the
+monitor's projection rule; in particular a stalled pipeline cannot consume
+more than the patience window beyond its projected-competitive segment.
+\end{proposition}
+
+\section{Experiments}
+\label{sec:experiments}
+\subsection{Forward model on real Q3D data}
+% table: capacitance MAPE + downstream errors, iid and out-of-hull
+TODO
+\subsection{Routed solver benchmarks}
+% per-resolution pipeline times; router vs oracle vs fixed; OOD; choices
+TODO
+\subsection{Ablations}
+% escalation on/off; surrogate quality vs routing benefit; decision overhead
+TODO
+
+\section{Related work}
+% HINTS; greedy PDE router; SQuADDS interpolation; AMG practice; neural
+% operators for EM; verification-first hybrids.
+TODO
+
+\section{Limitations and roadmap}
+% 2D plan-view v0; calibration to 3D; Palace backend; eigenmode analyses;
+% cost-model transfer across hardware.
+TODO
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{squadds} S.~Shanto et al. SQuADDS: A validated design database and
+simulation workflow for superconducting qubit design. \emph{Quantum} 8, 1465
+(2024).
+\bibitem{hints} E.~Zhang et al. Blending neural operators and relaxation
+methods in PDE numerical solvers. \emph{Nature Machine Intelligence} (2024).
+\bibitem{router} S.~Rayan, Y.~Patel, A.~Tewari. A greedy PDE router for
+blending neural operators and classical methods. arXiv:2509.24814 (2025).
+\bibitem{koch} J.~Koch et al. Charge-insensitive qubit design derived from the
+Cooper pair box. \emph{Phys. Rev. A} 76, 042319 (2007).
+\bibitem{pyamg} N.~Bell et al. PyAMG: Algebraic multigrid solvers in Python.
+\emph{JOSS} 8(87), 5495 (2023).
+\bibitem{minev} Z.~Minev et al. Circuit quantum electrodynamics (cQED) with
+modular quasi-lumped models. arXiv:2103.10344 (2021).
+\end{thebibliography}
+
+\end{document}
