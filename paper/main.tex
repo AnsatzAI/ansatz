@@ -54,25 +54,138 @@ acceleration becomes deployable in engineering design loops.
 
 \section{Introduction}
 \label{sec:intro}
-% Design loop context; cost of Q3D/HFSS in the loop; why surrogates alone are
-% not deployable (silent extrapolation failure); why verification-first.
-TODO
+
+Superconducting quantum processors are designed in a loop whose inner step is
+electromagnetic simulation. A designer adjusts planar geometry --- arm lengths
+of a cross-shaped transmon island, the reach of a readout claw, etch gaps to
+the ground plane --- and asks what Hamiltonian the physical chip will realize:
+charging energy $E_C$, qubit frequency $f_q$, anharmonicity $\alpha$, readout
+coupling $g$, dispersive shift $\chi$. The workhorse answer is a
+multi-conductor capacitance extraction (Ansys Q3D in most labs) followed by a
+lumped-oscillator-model (LOM) reduction~\cite{koch,minev}. Each extraction
+costs minutes; design loops, frequency-allocation studies, and yield analyses
+run hundreds to thousands of them. This loop, not the final sign-off
+simulation, is where design time actually goes.
+
+Neural surrogates promise millisecond predictions, and in distribution they
+deliver (Section~\ref{sec:experiments}). The deployment problem is what
+happens \emph{off} distribution: a surrogate extrapolating outside its
+training hull fails silently, and in a domain where a misallocated qubit
+frequency means a dead chip after a multi-week fabrication cycle, silent
+failure is disqualifying. The established alternatives are unsatisfying in the
+other direction: fixed hybrid schedules such as HINTS~\cite{hints} interleave
+a neural corrector with classical relaxation on a rigid cadence, paying
+surrogate costs whether or not they help; per-iteration learned routing over
+solver ensembles~\cite{router} adapts more finely but optimizes iteration
+progress rather than the quantity a practitioner buys hardware for:
+wall-clock to a \emph{verified} answer.
+
+This report describes the v0 Ansatz engine, built around two commitments.
+First, \textbf{verification is unconditional}: every field the engine returns
+satisfies a relative-residual tolerance on the target discretization, checked
+directly, with a sparse-direct fallback on failure. Learned components can
+only spend or save time; they cannot corrupt results. Second, \textbf{routing
+is an economic decision made per instance}: a cost model predicts the
+wall-clock of each available pipeline for the design, grid, and tolerance at
+hand, the cheapest is chosen, and a runtime monitor escalates --- once,
+warm-started --- if the observed convergence slope betrays the prediction.
+The result is an engine whose worst case is the classical solver plus
+milliseconds, and whose common case is substantially faster.
 
 \section{Setting}
 \label{sec:setting}
-% Planar transmon family (xmon + claw); electrostatics; capacitance matrix;
-% LOM reduction to (E_C, f_q, alpha, g, chi). Real data: SQuADDS.
-TODO
+
+\paragraph{Device family.} We target the xmon-style transmon with readout
+claw: a cross-shaped island in an etched pocket of a grounded plane, one arm
+wrapped by a C-shaped coupler. This family is the backbone of the SQuADDS
+validated design database~\cite{squadds}, which records, for 1{,}934 designs,
+the geometry and the Ansys Q3D capacitance matrix (adaptively refined to
+$0.1\%$). The database varies three parameters (cross length 90--420\,$\mu$m,
+claw length 70--400\,$\mu$m, ground spacing 4.1--10\,$\mu$m); our generated
+benchmark family varies all seven (widths, gaps included) around the same
+anchors.
+
+\paragraph{From fields to Hamiltonians.} With conductors
+$\{1,\dots,K\}$ embedded as Dirichlet regions, excitation $k$ solves the
+Laplace problem with conductor $k$ at unit potential; discrete Gauss-law
+charges assemble the Maxwell capacitance matrix $C$. The LOM reduction maps
+$C_q = |C_{\mathrm{cross,gnd}}| + |C_{\mathrm{cross,claw}}|$ and
+$C_c = |C_{\mathrm{cross,claw}}|$ through exact Cooper-pair-box
+diagonalization to $(f_q, \alpha, E_C)$ and through the exact lumped coupling
+formula to $g$, with the beyond-RWA second-order dispersive shift
+$\chi$~\cite{koch,squadds}. Designers target the Hamiltonian quantities; the
+capacitance matrix is the interface our engine must produce quickly and
+credibly.
+
+\paragraph{Discretization.} v0 solves 2D plan-view electrostatics on uniform
+grids ($n \in \{255, 511, 1023, 2047\}$, embedded Dirichlet masks,
+matrix-free 5-point operators alongside assembled CSR forms). Verified
+accuracy is defined against this discretization; the realism of the family
+rests on the geometry anchoring above and on Tier~1 being trained on real Q3D
+matrices. The 3D solver backend (AWS Palace) is roadmap, not v0.
 
 \section{Method}
 \label{sec:method}
+
 \subsection{Tier 1: forward surrogate on validated Q3D data}
-TODO
+
+Tier 1 is deliberately unglamorous: per-entry gradient-boosted regressors
+mapping the varied geometry parameters to the five distinct capacitance-matrix
+entries, trained on the 1{,}934 SQuADDS Q3D extractions. Inference is
+microseconds on a CPU; retraining is seconds. We benchmark against the methods
+a practitioner would otherwise use on the same database: nearest-design lookup
+(the local behavior of database interpolation), distance-weighted $k$NN, a
+global linear fit, and a random forest. SQuADDS's own published interpolation
+is a physics-based scaling law around the nearest design~\cite{squadds}; no
+forward ML surrogate ships with the database, which is precisely the gap
+Tier~1 fills. Because designers consume Hamiltonian parameters rather than
+capacitances, we report both the capacitance error and its LOM image
+$(f_q,\alpha,g,\chi)$.
+
 \subsection{Tier 2: routed, verified field solves}
-% pipelines, shared per-design context, cost-model router, escalation monitor,
-% unconditional verification. Contrast: per-iteration greedy routing
-% (arXiv:2509.24814), HINTS fixed schedules.
-TODO
+
+Tier 2 answers the designs Tier 1 cannot be trusted on. The unit of work is a
+\emph{design solve}: $K$ excitations sharing one geometry, hence one sparsity
+structure --- so assembly, factorization, AMG hierarchy, and surrogate batch
+inference are computed once per design and shared, exactly as a practitioner
+would amortize them. The pipelines are:
+
+\begin{itemize}
+  \item \textbf{direct}: assemble once; sparse LU; $K$ triangular solves.
+  \item \textbf{amg\_cg}: assemble once; smoothed-aggregation AMG setup
+        (pyamg~\cite{pyamg}); CG per excitation, hierarchy reused.
+  \item \textbf{surr\_cg}: U-Net field prediction per excitation (batched, one
+        GPU pass); matrix-free CG from the predicted iterate; \emph{no
+        assembly, no setup}.
+  \item \textbf{surr\_amg}: surrogate init, then AMG-CG polish (buys AMG's
+        convergence when the prediction is good but CG stalls).
+  \item \textbf{hints}: the fixed 1-in-16 corrector schedule of~\cite{hints}
+        with the same U-Net as corrector --- the fixed-schedule control.
+\end{itemize}
+
+\paragraph{Cost-model router.} Ten features describe an instance: the seven
+geometry parameters, $\log_2 n$, free-node fraction, and $-\log_{10}\tau$.
+Per-pipeline gradient-boosted regressors predict $\log$ wall-clock; the router
+takes the argmin. Decisions cost microseconds, the model is a few hundred
+kilobytes, and refitting on a customer's own instance mix is a
+seconds-long job on measurements the engine logs anyway. We chose this over
+per-iteration classification~\cite{router} deliberately: the object with
+economic meaning is the total verified solve time, the per-design pipeline
+space is small and structured, and instance-level regression makes the
+router's errors interpretable (a mispredicted cost, not an opaque policy).
+
+\paragraph{Escalation monitor.} Iterative pipelines log
+$(t, \log_{10}\|r\|)$ per block; a linear projection of the recent slope
+estimates the finish time. If the projection exceeds the predicted cost of the
+best alternative (plus the elapsed segment), the solve escalates to that
+alternative exactly once, warm-started from the current iterate. This converts
+cost-model errors from unbounded stalls into a bounded, observable event.
+
+\paragraph{Verification.} Every pipeline ends by evaluating the true relative
+residual on the target grid. If it exceeds $\tau$ (never observed in our
+benchmarks), the engine silently reruns the direct pipeline. The guarantee to
+the user is therefore discretization-exact accuracy at $\tau$, independent of
+every learned component.
 
 \subsection{Guardrail properties}
 \begin{proposition}[Verification safety]
@@ -103,14 +216,40 @@ TODO
 TODO
 
 \section{Related work}
-% HINTS; greedy PDE router; SQuADDS interpolation; AMG practice; neural
-% operators for EM; verification-first hybrids.
-TODO
+
+\textbf{Hybrid neural--classical solvers.} HINTS~\cite{hints} demonstrated
+that a DeepONet corrector interleaved with relaxation damps complementary
+spectral modes; its cadence, however, is a fixed hyperparameter, and our
+measurements show the schedule is dominated by plain classical pipelines on
+this workload at every resolution. The greedy PDE router~\cite{router} learns
+\emph{which} operator to apply per iteration with approximation guarantees
+under contractive error propagation; we inherit its central premise --- no
+single method dominates --- but move the decision to the instance level,
+target verified wall-clock, and add the escalation guardrail, trading
+per-iteration optimality theory for deployability. \textbf{Design databases.}
+SQuADDS~\cite{squadds} provides the validated data and a physics-based
+scaling interpolation; its authors report percent-level accuracy in
+distribution and degradation outside the pre-simulated hull, consistent with
+what we measure for all data-driven predictors, including ours.
+\textbf{Classical practice.} pyamg's smoothed-aggregation CG~\cite{pyamg} is
+the strong open-source baseline for these SPD systems, and sparse direct
+factorization is unbeatable at small scale --- both are therefore pipelines
+inside the router rather than external competitors.
 
 \section{Limitations and roadmap}
-% 2D plan-view v0; calibration to 3D; Palace backend; eigenmode analyses;
-% cost-model transfer across hardware.
-TODO
+
+v0's field solver is 2D plan-view electrostatics: the right benchmark for
+routing logic and for surrogate-initialized iteration, but not a replacement
+for 3D extraction; Tier 1 carries the 3D realism today by training directly
+on Q3D matrices. The near-term roadmap is (i) a 3D backend via AWS Palace
+with the same router and verification contract, (ii) eigenmode analyses
+(resonator frequency and $\kappa$) where the SQuADDS cavity-claw tables
+provide validated anchors, (iii) cost-model transfer across hardware via
+online refitting on engine logs, and (iv) uncertainty-aware Tier-1/Tier-2
+handoff (hull-distance triggers) so the router also decides \emph{whether to
+solve at all}. The engine logs every measurement needed to retrain both the
+cost model and the surrogate, so each customer deployment improves its own
+routing.
 
 \bibliographystyle{plain}
 \begin{thebibliography}{9}
