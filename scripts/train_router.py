@@ -56,13 +56,22 @@ def main(train_paths, eval_paths, out_dir):
     results = {}
     X = ev[feat_cols].values.astype(np.float32)
 
+    # single-solve mode overhead (honest per-call cost)
     t0 = time.perf_counter()
-    decisions = []
-    for i, x in enumerate(X):
-        allowed = [p for p in router.models
-                   if p in ev.columns and np.isfinite(ev.iloc[i][p])]
-        decisions.append(router.decide(x, allowed=allowed))
+    for x in X[:50]:
+        router.decide(x)
+    single_overhead = (time.perf_counter() - t0) / max(min(len(X), 50), 1)
+    # sweep mode: batch decisions, then mask to measured pipelines
+    t0 = time.perf_counter()
+    decisions = router.decide_batch(X)
     overhead = (time.perf_counter() - t0) / max(len(X), 1)
+    for i, d in enumerate(decisions):
+        ok = [p for p in d.predicted_costs
+              if p in ev.columns and np.isfinite(ev.iloc[i][p])]
+        if d.pipeline not in ok:
+            best = min({p: d.predicted_costs[p] for p in ok}, key=d.predicted_costs.get)
+            decisions[i] = type(d)(pipeline=best, predicted_costs=d.predicted_costs,
+                                   features=d.features)
 
     routed_time = np.array(
         [ev.iloc[i][d.pipeline] + overhead for i, d in enumerate(decisions)]
@@ -73,6 +82,7 @@ def main(train_paths, eval_paths, out_dir):
     summary = {
         "n_eval": len(ev),
         "decision_overhead_ms": overhead * 1e3,
+        "decision_overhead_single_ms": single_overhead * 1e3,
         "routed_total_s": float(routed_time.sum()),
         "oracle_total_s": float(oracle_time.sum()),
         "routed_vs_oracle": float(routed_time.sum() / oracle_time.sum()),

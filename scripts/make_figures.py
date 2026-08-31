@@ -80,9 +80,21 @@ def _routed_times(df: pd.DataFrame, router) -> pd.DataFrame:
     return sub
 
 
+
+def _stagger(ax, items, min_gap_log=0.14):
+    """items: list of (y, label, color). Nudge labels apart in log space."""
+    items = sorted(items, key=lambda t: t[0])
+    ys = [np.log10(y) for y, _, _ in items]
+    for i in range(1, len(ys)):
+        if ys[i] - ys[i - 1] < min_gap_log:
+            ys[i] = ys[i - 1] + min_gap_log
+    return [(10 ** ly, lab, c) for ly, (_, lab, c) in zip(ys, items)]
+
+
 def fig_times_vs_n(sub: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(5.4, 3.6))
     ns = sorted(sub.n.unique())
+    endpoints = []
     for s in SERIES:
         col = s if s != "routed" else "routed"
         if col not in sub.columns:
@@ -92,12 +104,15 @@ def fig_times_vs_n(sub: pd.DataFrame):
         if not valid:
             continue
         xs, ys = zip(*valid)
-        lw = 2.6 if s == "routed" else 2.0
-        ax.plot(xs, ys, color=COLOR[s], linewidth=lw, marker="o", markersize=4.5,
-                zorder=5 if s == "routed" else 3)
-        ax.annotate(LABEL[s], (xs[-1], ys[-1]), xytext=(6, 0),
-                    textcoords="offset points", va="center", fontsize=8.2,
-                    color="#333")
+        lw = 3.0 if s == "routed" else 2.0
+        ls = (0, (4, 3)) if s == "routed" else "-"
+        ax.plot(xs, ys, color=COLOR[s], linewidth=lw, linestyle=ls, marker="o",
+                markersize=4.5, zorder=6 if s == "routed" else 3)
+        endpoints.append((ys[-1], LABEL[s], COLOR[s], xs[-1]))
+    xmax = max(e[3] for e in endpoints)
+    for y, lab, c in _stagger(ax, [(y, l, c) for y, l, c, _ in endpoints]):
+        ax.annotate(lab, (xmax, y), xytext=(8, 0), textcoords="offset points",
+                    va="center", fontsize=8.2, color="#333")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
     ax.set_xticks(ns)
@@ -132,6 +147,7 @@ def _times_vs_n_dark(sub: pd.DataFrame, surface: str = "#05070c"):
     fig.patch.set_facecolor(surface)
     ax.set_facecolor(surface)
     ns = sorted(sub.n.unique())
+    endpoints = []
     for s in SERIES:
         col = s
         if col not in sub.columns:
@@ -141,12 +157,15 @@ def _times_vs_n_dark(sub: pd.DataFrame, surface: str = "#05070c"):
         if not valid:
             continue
         xs, ys = zip(*valid)
-        lw = 3.0 if s == "routed" else 2.0
-        ax.plot(xs, ys, color=DARK_COLOR[s], linewidth=lw, marker="o",
-                markersize=4.5, zorder=5 if s == "routed" else 3)
-        ax.annotate(LABEL[s], (xs[-1], ys[-1]), xytext=(7, 0),
-                    textcoords="offset points", va="center", fontsize=8.6,
-                    color="#c3cbd9")
+        lw = 3.2 if s == "routed" else 2.0
+        ls = (0, (4, 3)) if s == "routed" else "-"
+        ax.plot(xs, ys, color=DARK_COLOR[s], linewidth=lw, linestyle=ls,
+                marker="o", markersize=4.5, zorder=6 if s == "routed" else 3)
+        endpoints.append((ys[-1], LABEL[s], DARK_COLOR[s], xs[-1]))
+    xmax = max(e[3] for e in endpoints)
+    for y, lab, c in _stagger(ax, [(y, l, c) for y, l, c, _ in endpoints]):
+        ax.annotate(lab, (xmax, y), xytext=(8, 0), textcoords="offset points",
+                    va="center", fontsize=8.6, color="#c3cbd9")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
     ax.set_xticks(ns)

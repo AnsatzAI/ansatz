@@ -43,13 +43,18 @@ per instance among sparse-direct, AMG-preconditioned Krylov,
 surrogate-initialized matrix-free Krylov, and hybrid pipelines, every pipeline
 terminates in residual verification, and a runtime escalation monitor bounds
 the cost of routing mistakes. On geometry distributions anchored to the same
-validated design family, the routed solver tracks the per-instance oracle
-within measurement noise and dominates every fixed pipeline choice as
-resolution varies, while HINTS-style fixed hybrid schedules are never
-competitive. We argue this instance-level, verification-first reformulation of
-learned solver routing --- rather than per-iteration classification or
-uncertainty-quantified surrogation alone --- is the form in which neural
-acceleration becomes deployable in engineering design loops.
+validated design family, the routed solver runs at 1.0002$\times$ the
+per-instance oracle with 100\% correct pipeline selection on held-out and
+out-of-distribution designs, is never more than 0.4\% behind the best fixed
+choice on any instance, and avoids the $2$--$30\times$ penalty of committing
+to any learned pipeline and the $\sim$900$\times$ penalty of a fixed
+HINTS schedule. Notably, the router's optimal policy in 2D is to decline the
+neural pipelines entirely --- sparse direct factorization dominates this
+regime, a negative result we report rather than obscure, and one the router
+discovers automatically. We argue this instance-level, verification-first
+reformulation of learned solver routing --- rather than per-iteration
+classification or uncertainty-quantified surrogation alone --- is the form in
+which neural acceleration becomes deployable in engineering design loops.
 \end{abstract}
 
 \section{Introduction}
@@ -298,18 +303,41 @@ surrogate's absolute error field.}
 \label{fig:field}
 \end{figure}}{}
 
-TODO-NUMBERS: router-vs-oracle ratio, speedups vs each fixed pipeline,
-win rates, worst-case per-instance ratio, decision overhead, OOD split
-results, verification-failure count (expected 0), escalation statistics.
+\paragraph{Headline numbers.} On 450 held-out test designs (plus 285 OOD
+designs from ranges widened $1.3\times$), the router attains
+\textbf{1.0002$\times$} (OOD: 1.0004$\times$) the per-instance oracle
+wall-clock with \textbf{100\% oracle agreement}, at 11\,$\mu$s per decision in
+sweep mode (0.62\,ms single-solve). Relative to fixed pipelines, routing is
+never more than \textbf{0.4\%} (OOD: 0.6\%) slower than the best fixed choice
+on \emph{any} instance, while being $2.1\times$ faster than AMG-CG
+(geometric mean; $2.25\times$ OOD), $4.9$--$30\times$ faster than committing
+to any surrogate pipeline, and $\sim$900$\times$ faster than the HINTS
+schedule at the sizes where HINTS terminates within budget. Across all 5{,}930
+measured solve cells there were \textbf{zero verification failures}; 758
+budget-exhausted pipeline runs (mostly HINTS and unpreconditioned
+surrogate+CG at large $n$) exercised the guaranteed direct fallback, whose
+cost is included in their reported times.
 
-\subsection{Discussion}
-The benchmark's central pattern is a crossover: sparse direct dominates small
-grids; surrogate-initialized matrix-free pipelines dominate large grids by
-skipping assembly and setup entirely; AMG-CG is the strong middle. A fixed
-choice pays the crossover penalty somewhere; the router pays a microsecond
-decision everywhere. HINTS' fixed cadence --- the same corrector network, the
-same smoothers --- is dominated at every size measured, confirming that
-\emph{when} to spend surrogate inference matters more than \emph{whether}.
+\subsection{Discussion: the honest 2D verdict}
+We expected a crossover --- direct at small $n$, surrogate-initialized
+matrix-free iteration at large $n$. \textbf{It does not materialize in 2D},
+and we report that deliberately. The etched-gap device family leaves only
+$\sim$10\% of grid nodes unknown, so a $2047^2$ grid is a banded 2D system of
+$\sim$400k unknowns that SuperLU factors in half a second; meanwhile every
+matrix-free grid operation touches all $4.2$M nodes, a $10\times$ structural
+handicap, and the surrogate's initialization advantage (1.6--1.9\% relative
+error at native resolutions) buys too few iterations to overcome it. The
+router's contribution on this workload is therefore \emph{refusal}: it learns
+to decline the neural pipelines everywhere, ties the winner to within
+microseconds, and converts the 2--900$\times$ penalty of a wrong fixed
+commitment into a non-event. We regard ``the router correctly declines ML''
+as a feature of verification-first design, not an embarrassment: the same
+engine, contract, and cost model apply unchanged in 3D, where fill-in ends
+sparse-direct dominance and memory-feasible solvers are exactly the
+matrix-free, surrogate-initialized kind. HINTS' fixed cadence --- the same
+corrector network, the same smoothers --- is dominated at every size
+measured, confirming that \emph{when} to spend surrogate inference matters
+more than \emph{whether}.
 
 \section{Related work}
 

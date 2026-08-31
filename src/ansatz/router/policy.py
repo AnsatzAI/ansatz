@@ -79,6 +79,21 @@ class CostModelRouter:
         best = min(pred, key=pred.get)
         return RouteDecision(pipeline=best, predicted_costs=pred, features=feats)
 
+    def decide_batch(
+        self, feats: np.ndarray, allowed: list[str] | None = None
+    ) -> list[RouteDecision]:
+        """Sweep mode: one model call per pipeline for a whole batch of
+        instances (microseconds per decision instead of ~1 ms)."""
+        allowed = allowed or list(self.models)
+        preds = {name: np.exp(self.models[name].predict(feats)) for name in allowed}
+        out = []
+        for i in range(feats.shape[0]):
+            costs = {name: float(preds[name][i]) for name in allowed}
+            best = min(costs, key=costs.get)
+            out.append(RouteDecision(pipeline=best, predicted_costs=costs,
+                                     features=feats[i]))
+        return out
+
     def save(self, path: str | Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:

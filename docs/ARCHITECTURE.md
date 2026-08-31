@@ -66,22 +66,25 @@ Key properties:
   worst case is bounded by (observed segment + alternative time) rather than an
   unbounded stall.
 
-## Why routing (and not one method)
+## Why routing (and what the benchmark actually showed)
 
-No single pipeline dominates across resolutions:
+The v0 benchmark's headline is deliberately a *negative* result for neural
+solving in 2D: on this device family, etched-gap geometries leave only ~10% of
+grid nodes unknown, the systems are 2D and banded, and **sparse direct
+factorization wins at every resolution measured (255–2047)**. The router
+learns exactly that — it picks `direct` with 100% oracle agreement on held-out
+and OOD designs, runs at 1.000x the per-instance oracle (11 µs/decision in
+sweep mode), and thereby avoids the 2–30x cost of committing to any
+learned pipeline and the ~900x cost of a fixed HINTS schedule
+(see BENCHMARKS.md).
 
-- Small grids (n≈255, ~6k unknowns): sparse direct wins outright — assembly
-  and factorization are milliseconds; any learned path pays surrogate
-  inference for nothing.
-- Large grids (n≥1023, 10^5–10^6 unknowns): assembly + factorization grow
-  superlinearly; a good surrogate init + matrix-free CG (zero assembly, zero
-  setup) reaches tolerance far sooner; AMG-CG sits between.
-- The crossover point depends on geometry (free-node fraction, gap widths),
-  tolerance, and hardware — i.e., it is a *learned* function, not a threshold
-  you hand-tune.
-
-The router learns exactly this map, and the same infrastructure extends to 3D
-solvers (AWS Palace) and eigenmode analyses on the roadmap.
+That is the product argument: the value of a router is not that ML always
+wins — it is that *you never pay for ML when it doesn't*. The measured story
+changes qualitatively in 3D, where fill-in makes direct factorization scale
+poorly and matrix-free surrogate-initialized iteration is the only
+memory-feasible path — which is why the 3D backend (AWS Palace) is the
+roadmap item where the learned pipelines earn their keep, with the identical
+router and verification contract already in place.
 
 ## Module map
 
