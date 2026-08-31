@@ -171,7 +171,7 @@ def _rhs(problem: LaplaceProblem) -> np.ndarray:
     return b
 
 
-def _hints_with_state(problem, ctx, k, tol, n_r: int = 16):
+def _hints_with_state(problem, ctx, k, tol, n_r: int = 16, budget_s: float = 30.0):
     from ..solvers.smoothers import RedBlackGaussSeidel
 
     state = {"u": problem.initial_guess()}
@@ -183,7 +183,9 @@ def _hints_with_state(problem, ctx, k, tol, n_r: int = 16):
     smoother = RedBlackGaussSeidel(sweeps=1)
     u = state["u"]
     it = 0
-    while problem.residual_norm(u) > tol and it < 3000:
+    t0 = time.perf_counter()
+    while (problem.residual_norm(u) > tol and it < 3000
+           and time.perf_counter() - t0 < budget_s):
         if it % n_r == 0 and it > 0:
             state["u"] = u
             delta = corrector(problem, problem.residual(u))

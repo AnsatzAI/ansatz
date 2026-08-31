@@ -44,27 +44,31 @@ def main(train_paths, eval_paths, out_dir):
 
     tr, feat_cols = pivot(load_frames(train_paths))
     avail = [p for p in PIPELINES if p in tr.columns]
-    tr = tr.dropna(subset=avail)
     feats = tr[feat_cols].values.astype(np.float32)
-    costs = {p: tr[p].values for p in avail}
+    costs = {p: tr[p].values for p in avail}  # NaNs masked inside fit()
     router = CostModelRouter()
     router.fit(feats, costs)
     router.save(out / "router.pkl")
 
     ev, _ = pivot(load_frames(eval_paths))
-    ev = ev.dropna(subset=[p for p in avail if p in ev.columns])
+    core = [p for p in avail if p != "hints" and p in ev.columns]
+    ev = ev.dropna(subset=core).reset_index(drop=True)
     results = {}
     X = ev[feat_cols].values.astype(np.float32)
 
     t0 = time.perf_counter()
-    decisions = [router.decide(x, allowed=avail) for x in X]
+    decisions = []
+    for i, x in enumerate(X):
+        allowed = [p for p in router.models
+                   if p in ev.columns and np.isfinite(ev.iloc[i][p])]
+        decisions.append(router.decide(x, allowed=allowed))
     overhead = (time.perf_counter() - t0) / max(len(X), 1)
 
     routed_time = np.array(
         [ev.iloc[i][d.pipeline] + overhead for i, d in enumerate(decisions)]
     )
-    oracle_time = ev[avail].min(axis=1).values
-    oracle_choice = ev[avail].idxmin(axis=1)
+    oracle_time = ev[core].min(axis=1).values
+    oracle_choice = ev[core].idxmin(axis=1)
 
     summary = {
         "n_eval": len(ev),
@@ -77,7 +81,7 @@ def main(train_paths, eval_paths, out_dir):
         ),
         "pipelines": {},
     }
-    for p in avail:
+    for p in core:
         base = ev[p].values
         ratio = routed_time / base
         summary["pipelines"][p] = {
@@ -95,7 +99,7 @@ def main(train_paths, eval_paths, out_dir):
         rt = routed_time[[ev.index.get_loc(i) for i in idx]]
         summary["by_n"][int(n)] = {
             "routed_total_s": float(rt.sum()),
-            **{p: float(g[p].sum()) for p in avail},
+            **{p: float(np.nansum(g[p])) for p in avail if p in g.columns},
             "router_choices": pd.Series(
                 [decisions[ev.index.get_loc(i)].pipeline for i in idx]
             ).value_counts().to_dict(),

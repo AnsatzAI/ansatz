@@ -54,14 +54,20 @@ class CostModelRouter:
         self.models = models or {}
 
     def fit(self, feats: np.ndarray, costs: dict[str, np.ndarray]) -> None:
+        """Per-pipeline regressors; NaN costs (unmeasured cells) are masked so
+        a pipeline missing at some resolutions doesn't discard others' rows."""
         from sklearn.ensemble import GradientBoostingRegressor
 
         self.models = {}
         for name, y in costs.items():
+            y = np.asarray(y, dtype=float)
+            mask = np.isfinite(y)
+            if mask.sum() < 20:
+                continue
             m = GradientBoostingRegressor(
                 n_estimators=300, max_depth=3, learning_rate=0.05, subsample=0.9
             )
-            m.fit(feats, np.log(np.maximum(y, 1e-4)))
+            m.fit(feats[mask], np.log(np.maximum(y[mask], 1e-4)))
             self.models[name] = m
 
     def decide(self, feats: np.ndarray, allowed: list[str] | None = None) -> RouteDecision:
