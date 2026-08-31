@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import scipy.sparse.linalg as spla
 
-from ansatz.geometry.sampler import sample_designs, ood_ranges
+from ansatz.geometry.sampler import ood_ranges, sample_designs
 from ansatz.geometry.transmon import build_problem_masks
 from ansatz.pde.laplace import LaplaceProblem
 

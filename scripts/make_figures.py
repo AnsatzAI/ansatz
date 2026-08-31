@@ -112,6 +112,57 @@ def fig_times_vs_n(sub: pd.DataFrame):
     fig.savefig(FIGS / "times_vs_n.pdf")
     fig.savefig(FIGS / "times_vs_n.png", dpi=200)
     plt.close(fig)
+    _times_vs_n_dark(sub)
+
+
+DARK_COLOR = {
+    "direct": "#3987e5",
+    "amg_cg": "#d95926",
+    "surr_cg": "#199e70",
+    "surr_mgcg": "#c98500",
+    "surr_amg": "#d55181",
+    "hints": "#008300",
+    "routed": "#9085e9",
+}
+
+
+def _times_vs_n_dark(sub: pd.DataFrame, surface: str = "#05070c"):
+    """Website variant: dark palette column (validated for the dark surface)."""
+    fig, ax = plt.subplots(figsize=(7.4, 4.1))
+    fig.patch.set_facecolor(surface)
+    ax.set_facecolor(surface)
+    ns = sorted(sub.n.unique())
+    for s in SERIES:
+        col = s
+        if col not in sub.columns:
+            continue
+        means = [sub[sub.n == n][col].mean() for n in ns]
+        valid = [(n, m) for n, m in zip(ns, means) if np.isfinite(m)]
+        if not valid:
+            continue
+        xs, ys = zip(*valid)
+        lw = 3.0 if s == "routed" else 2.0
+        ax.plot(xs, ys, color=DARK_COLOR[s], linewidth=lw, marker="o",
+                markersize=4.5, zorder=5 if s == "routed" else 3)
+        ax.annotate(LABEL[s], (xs[-1], ys[-1]), xytext=(7, 0),
+                    textcoords="offset points", va="center", fontsize=8.6,
+                    color="#c3cbd9")
+    ax.set_xscale("log", base=2)
+    ax.set_yscale("log")
+    ax.set_xticks(ns)
+    ax.set_xticklabels([str(n) for n in ns], color="#7e8798")
+    ax.tick_params(colors="#7e8798")
+    ax.set_xlabel("grid size n", color="#7e8798")
+    ax.set_ylabel("wall-clock per verified design solve (s)", color="#7e8798")
+    ax.grid(True, which="major", axis="y", color="#141824", linewidth=0.9)
+    ax.set_xlim(ns[0] * 0.9, ns[-1] * 4.0)
+    for spine in ax.spines.values():
+        spine.set_color("#222738")
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(FIGS / "times_vs_n_dark.png", dpi=200, facecolor=surface)
+    plt.close(fig)
 
 
 def fig_router_choices(sub: pd.DataFrame):

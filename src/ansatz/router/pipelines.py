@@ -17,7 +17,6 @@ import scipy.sparse.linalg as spla
 from ..pde.laplace import LaplaceProblem
 from ..solvers.amg import AMGContext
 from ..solvers.krylov import ConjugateGradientBlock
-from ..bench.hints import solve_hints
 from .policy import EscalationMonitor
 
 

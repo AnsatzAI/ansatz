@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from ansatz.pde.laplace import LaplaceProblem
 from ansatz.pde.capacitance import capacitance_matrix
+from ansatz.pde.laplace import LaplaceProblem
 from ansatz.solvers import (
     ConjugateGradientBlock,
     MultigridVCycle,

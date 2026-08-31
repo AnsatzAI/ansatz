@@ -1,9 +1,14 @@
-from .smoothers import DampedJacobi, RedBlackGaussSeidel, sor
-from .multigrid import MultigridVCycle
-from .krylov import ConjugateGradientBlock
 from .direct import DirectSolver, solve_direct
+from .krylov import ConjugateGradientBlock
+from .multigrid import MultigridVCycle
+from .smoothers import DampedJacobi, RedBlackGaussSeidel, sor
 
 __all__ = [
-    "DampedJacobi", "RedBlackGaussSeidel", "sor",
-    "MultigridVCycle", "ConjugateGradientBlock", "DirectSolver", "solve_direct",
+    "ConjugateGradientBlock",
+    "DampedJacobi",
+    "DirectSolver",
+    "MultigridVCycle",
+    "RedBlackGaussSeidel",
+    "solve_direct",
+    "sor",
 ]

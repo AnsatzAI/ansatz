@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ansatz.router.policy import CostModelRouter, PIPELINES
+from ansatz.router.policy import PIPELINES, CostModelRouter
 
 
 def load_frames(paths):
@@ -67,7 +67,7 @@ def main(train_paths, eval_paths, out_dir):
     oracle_choice = ev[avail].idxmin(axis=1)
 
     summary = {
-        "n_eval": int(len(ev)),
+        "n_eval": len(ev),
         "decision_overhead_ms": overhead * 1e3,
         "routed_total_s": float(routed_time.sum()),
         "oracle_total_s": float(oracle_time.sum()),

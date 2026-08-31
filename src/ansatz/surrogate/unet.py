@@ -15,7 +15,7 @@ The same network serves two roles:
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def _block(cin: int, cout: int) -> nn.Sequential:

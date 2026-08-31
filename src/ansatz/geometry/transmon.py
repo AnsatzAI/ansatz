@@ -14,7 +14,7 @@ Free (unknown) nodes are the etched vacuum gaps between conductors.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 import numpy as np
 

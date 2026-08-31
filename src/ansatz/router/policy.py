@@ -79,7 +79,7 @@ class CostModelRouter:
             pickle.dump(self.models, f)
 
     @classmethod
-    def load(cls, path: str | Path) -> "CostModelRouter":
+    def load(cls, path: str | Path) -> CostModelRouter:
         with open(path, "rb") as f:
             return cls(models=pickle.load(f))
 

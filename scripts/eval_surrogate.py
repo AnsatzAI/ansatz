@@ -32,9 +32,8 @@ def main(weights: str, data: str = "data/fields"):
 
         try:
             ds = FieldShards(data, "test", n)
-            import torch
 
-            for i in range(0, min(80, len(ds))):
+            for i in range(min(80, len(ds))):
                 x, y, free = ds[i]
                 fixedm = x[1].numpy().astype(bool)
                 p = LaplaceProblem(n=n, fixed_mask=fixedm,
