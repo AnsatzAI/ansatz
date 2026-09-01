@@ -37,15 +37,45 @@ feedline on sapphire, coarse mesh):
 This matches the documented reference results (~4.1 / 5.6 GHz, Q ~ 18.5k),
 validating the toolchain end-to-end.
 
-## Dev-scale experiments (this machine)
+## Dev-scale experiments (this machine, measured)
 
-1. **Shift sensitivity** — eigensolver `Target` sweep around the true mode.
-   Quantifies the wall-clock value of a Tier-1 frequency predictor.
-   Results: see `runs/em3d_results.parquet` (table below once complete).
-2. **Config frontier** — (FEM order, uniform refinement) cost/accuracy
-   frontier vs the reference config. The routing table for
-   cheapest-verified-config selection, verified via refinement-delta checks
-   on the eigenfrequency.
+**1. Shift sensitivity — the missed-mode cliff.** Eigensolver `Target` sweep
+at fixed config (true modes: 4.099 / 5.603 GHz):
+
+| Target (GHz) | wall-clock (s) | modes found |
+|---|---|---|
+| 2.0–4.05 (below f0) | 188–212 | 4.099, 5.603 ✔ |
+| 4.5 (above f0) | **617 (3.0x)** | **4.099 GHz qubit mode MISSED** |
+| 5.0 (above f0) | **532 (2.6x)** | **4.099 GHz qubit mode MISSED** |
+
+A target above a mode both triples the cost and silently drops that mode.
+Tier-1 frequency prediction is therefore a **correctness feature**: keep the
+shift on the safe side (predicted f0 minus margin), and verify the returned
+mode count. This is the 3D analogue of residual verification.
+
+**2. Config frontier — cheap configs fail verification.** On this mesh
+family, order-1 elements miss the qubit mode entirely (17.7 s but f0 off by
+28%; refined order-1 is slow *and* wrong at 1,174 s). Order-2 coarse
+(207 s) is the verified workhorse. Routing insight: there is no cheaper
+verified config on this family — the wall-clock win must come from the
+*design loop*, which motivates the advantage demo below.
+
+**3. Advantage demo (in progress).** Verified inverse design: hit target
+(f_qubit, f_readout) with the final design verified by a full Palace solve.
+Classical arm: Nelder-Mead over geometry, one full Palace solve per
+evaluation. Ansatz arm: Tier-1 surrogate inversion (microseconds) + one
+verification solve (+ at most one Jacobian correction). Both arms report
+end-to-end wall-clock and verified miss. See
+`scripts/em3d_advantage_demo.py`.
+
+## Bespoke data campaign
+
+Public data does not cover parameterized 3D full-wave eigenmodes, so the
+training set is generated in-house: `scripts/em3d_campaign.py` sweeps
+(cap_length, cap_gap, total_length, l_claw, n_meander_turns) through
+DeviceLayout.jl meshing and Palace eigenmode solves (~6 min/variant at dev
+tier; 100-variant overnight run on this machine). Records: geometry, f0, f1,
+Q factors, mesh/solve wall-clock. Resumable by tag.
 
 ## Compute plan
 
