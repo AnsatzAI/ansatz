@@ -17,7 +17,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "runs" / "em3d_dataset.parquet"
 
-FEATS = ["cap_length", "cap_gap", "total_length", "n_meander_turns"]
+FEATS = ["cap_length", "cap_gap", "total_length", "claw_length", "meander_turn_count"]
 TARGETS = ["f0", "f1"]
 
 

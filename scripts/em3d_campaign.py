@@ -36,10 +36,11 @@ OUT = ROOT / "runs" / "em3d_dataset.parquet"
 RANGES_UM = {
     "cap_length": (450.0, 800.0),      # transmon pad length (default 620)
     "cap_gap": (20.0, 40.0),           # pad-to-pad junction gap (default 30)
-    "total_length": (3600.0, 5400.0),  # readout resonator length (default ~4400)
+    "total_length": (4000.0, 5800.0),  # readout resonator length (default 5000)
+    "claw_length": (90.0, 160.0),      # readout claw length (default 121)
 }
 RANGES_INT = {
-    "n_meander_turns": (4, 7),
+    "meander_turn_count": (4, 6),
 }
 
 
@@ -78,9 +79,11 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int) -> dict:
         return dict(tag=tag, ok=False, stage="mesh", t_mesh=t_mesh,
                     err=(gen.stderr or gen.stdout)[-500:], **p_um, **p_int)
 
-    # normalize output dir + solver knobs through our variant machinery
+    # normalize output dir + solver knobs through our variant machinery;
+    # target 3.0 GHz sits safely below the family's lowest qubit mode
+    # (shift-cliff finding: targets above a mode skip it and run 2.5-3x slower)
     cfg = load_config(EX / f"ansatz_{tag}.json")
-    cfg = make_variant(cfg, f"postpro/ansatz/{tag}")
+    cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=3.0)
     cfg_path = write_config(cfg, EX / f"ansatz_{tag}.json")
     res = run_palace(cfg_path, ranks=ranks)
     row = dict(
