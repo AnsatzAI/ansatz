@@ -63,7 +63,8 @@ def append(row: dict) -> None:
     df.to_parquet(OUT)
 
 
-def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int) -> dict:
+def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
+                n_modes: int | None = None) -> dict:
     spec = {"tag": tag, "solver_order": 2, "params_um": p_um, "params_int": p_int}
     spec_path = EX / f"spec_{tag}.json"
     spec_path.write_text(json.dumps(spec))
@@ -83,7 +84,8 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int) -> dict:
     # target 3.0 GHz sits safely below the family's lowest qubit mode
     # (shift-cliff finding: targets above a mode skip it and run 2.5-3x slower)
     cfg = load_config(EX / f"ansatz_{tag}.json")
-    cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=3.0)
+    cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=3.0,
+                       n_modes=n_modes)
     cfg_path = write_config(cfg, EX / f"ansatz_{tag}.json")
     res = run_palace(cfg_path, ranks=ranks)
     row = dict(
@@ -93,6 +95,7 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int) -> dict:
         f1=res.freqs_ghz[1] if len(res.freqs_ghz) > 1 else None,
         q0=res.q_factors[0] if res.q_factors else None,
         q1=res.q_factors[1] if len(res.q_factors) > 1 else None,
+        f_all=json.dumps(res.freqs_ghz),
         **p_um, **p_int,
     )
     if not row["ok"]:

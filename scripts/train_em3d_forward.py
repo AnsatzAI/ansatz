@@ -28,13 +28,20 @@ def main() -> None:
     from sklearn.preprocessing import StandardScaler
 
     df = pd.read_parquet(DATA)
-    df = df[df.ok & df.f0.notna() & df.f1.notna()].reset_index(drop=True)
-    print(f"{len(df)} usable solves")
-    x = df[FEATS].values
-    results = {"n": int(len(df))}
+    df = df[df.ok & df.f0.notna()].reset_index(drop=True)
+    # f1 labels: keep only runs that captured the readout mode (physical band);
+    # the N=2 eigensolve returns a spurious high mode otherwise (see EM3D.md)
+    sets = {
+        "f0": df[(df.f0 > 3.2) & (df.f0 < 5.0)].reset_index(drop=True),
+        "f1": df[(df.f1 > 4.2) & (df.f1 < 7.6)].reset_index(drop=True),
+    }
+    print({k: len(v) for k, v in sets.items()}, "usable solves")
+    results = {"n": {k: int(len(v)) for k, v in sets.items()}}
 
     for tgt in TARGETS:
-        y = df[tgt].values
+        sub = sets[tgt]
+        x = sub[FEATS].values
+        y = sub[tgt].values
         loo_pred = np.zeros_like(y)
         knn_pred = np.zeros_like(y)
         for tr, te in LeaveOneOut().split(x):
@@ -55,9 +62,10 @@ def main() -> None:
 
     models = {}
     for tgt in TARGETS:
+        sub = sets[tgt]
         m = GradientBoostingRegressor(n_estimators=300, max_depth=2,
                                       learning_rate=0.05)
-        m.fit(x, df[tgt].values)
+        m.fit(sub[FEATS].values, sub[tgt].values)
         models[tgt] = m
     with open(ROOT / "runs" / "em3d_forward.pkl", "wb") as f:
         pickle.dump({"models": models, "feats": FEATS}, f)

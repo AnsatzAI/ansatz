@@ -50,10 +50,24 @@ def predict(models, feats, params: dict) -> tuple[float, float]:
     return float(models["f0"].predict(x)[0]), float(models["f1"].predict(x)[0])
 
 
+def _pick_modes(row: dict) -> dict:
+    """Identify qubit/readout modes from the full list by physical band."""
+    import json as _json
+
+    freqs = sorted(_json.loads(row.get("f_all", "[]")))
+    qubit = next((f for f in freqs if 3.2 < f < 5.0), None)
+    readout = next((f for f in freqs if f != qubit and 4.8 < f < 7.6
+                    and (qubit is None or f > qubit)), None)
+    row = dict(row)
+    row["f0"], row["f1"] = qubit, readout
+    return row
+
+
 def solve(params: dict, tag: str, ranks: int) -> dict:
     p_um = {k: params[k] for k in RANGES_UM}
     p_int = {k: int(params[k]) for k in RANGES_INT}
-    return run_variant(tag, p_um, p_int, ranks)
+    # N=4 modes so qubit + readout are robustly captured (see EM3D.md)
+    return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=4))
 
 
 def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
@@ -124,7 +138,7 @@ def classical_arm(f0t, f1t, tol_mhz, ranks, max_solves=12) -> dict:
         params = dict(zip(keys, x))
         row = solve(params, f"demo_classical_{count[0]}", ranks)
         count[0] += 1
-        if not row["ok"]:
+        if not row["ok"] or row["f0"] is None or row["f1"] is None:
             return 10.0
         err = float(np.hypot(row["f0"] - f0t, row["f1"] - f1t))
         if err < best["err"]:
