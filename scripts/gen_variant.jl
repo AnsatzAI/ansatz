@@ -10,7 +10,7 @@
 
 import JSON
 
-include("transmon.jl")
+include(joinpath(pwd(), "transmon.jl"))  # run with cwd = palace/examples/transmon
 using DeviceLayout: μm
 
 function main(spec_path::AbstractString)
@@ -24,7 +24,7 @@ function main(spec_path::AbstractString)
         kwargs[Symbol(k)] = Int(v)
     end
     generate_transmon(;
-        mesh_filename = "mesh/$(tag).msh2",
+        mesh_filename = "$(tag).msh2",
         config_filename = "ansatz_$(tag).json",
         solver_order = get(spec, "solver_order", 2),
         kwargs...,

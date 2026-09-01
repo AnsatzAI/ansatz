@@ -37,10 +37,10 @@ RANGES_UM = {
     "cap_length": (450.0, 800.0),      # transmon pad length (default 620)
     "cap_gap": (20.0, 40.0),           # pad-to-pad junction gap (default 30)
     "total_length": (4000.0, 5800.0),  # readout resonator length (default 5000)
-    "claw_length": (90.0, 160.0),      # readout claw length (default 121)
+    "l_claw": (90.0, 160.0),           # readout claw length (default 121)
 }
 RANGES_INT = {
-    "meander_turn_count": (4, 6),
+    "n_meander_turns": (4, 6),
 }
 
 

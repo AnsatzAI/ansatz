@@ -60,8 +60,8 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     t0 = time.time()
     # dense candidate grid over the box
     grids = [np.linspace(*RANGES_UM[k], 24) for k in RANGES_UM]
-    grids.append(np.arange(RANGES_INT["meander_turn_count"][0],
-                           RANGES_INT["meander_turn_count"][1] + 1))
+    grids.append(np.arange(RANGES_INT["n_meander_turns"][0],
+                           RANGES_INT["n_meander_turns"][1] + 1))
     keys = list(RANGES_UM) + list(RANGES_INT)
     best, best_err = None, np.inf
     names = list(RANGES_UM) + list(RANGES_INT)
@@ -82,7 +82,7 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
         # one linear correction via finite-difference Jacobian of the model
         x = np.array([best[k] for k in feats])
         jac = np.zeros((2, len(feats)))
-        eps = np.array([1.0 if k != "meander_turn_count" else 1 for k in feats])
+        eps = np.array([1.0 if k != "n_meander_turns" else 1 for k in feats])
         for j in range(len(feats)):
             xp = x.copy(); xp[j] += eps[j]
             f0p = models["f0"].predict(xp[None])[0]
