@@ -65,7 +65,8 @@ def append(row: dict) -> None:
 
 def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
                 n_modes: int | None = None,
-                target_ghz: float = 3.0) -> dict:
+                target_ghz: float = 3.0,
+                max_size: int | None = None) -> dict:
     spec = {"tag": tag, "solver_order": 2, "params_um": p_um, "params_int": p_int}
     spec_path = EX / f"spec_{tag}.json"
     spec_path.write_text(json.dumps(spec))
@@ -86,7 +87,7 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
     # (shift-cliff finding: targets above a mode skip it and run 2.5-3x slower)
     cfg = load_config(EX / f"ansatz_{tag}.json")
     cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=target_ghz,
-                       n_modes=n_modes)
+                       n_modes=n_modes, max_size=max_size)
     cfg_path = write_config(cfg, EX / f"ansatz_{tag}.json")
     res = run_palace(cfg_path, ranks=ranks)
     row = dict(

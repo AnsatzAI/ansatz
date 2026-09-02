@@ -33,6 +33,7 @@ def make_variant(
     tol: float | None = None,
     refinement: int | None = None,
     save_fields: bool = False,
+    max_size: int | None = None,
 ) -> dict:
     cfg = copy.deepcopy(base)
     cfg["Problem"]["Output"] = out_dir
@@ -49,6 +50,8 @@ def make_variant(
         eig["N"] = int(n_modes)
     if tol is not None:
         eig["Tol"] = float(tol)
+    if max_size is not None:
+        eig["MaxSize"] = int(max_size)
     if refinement is not None:
         model = cfg.setdefault("Model", {})
         ref = model.setdefault("Refinement", {})

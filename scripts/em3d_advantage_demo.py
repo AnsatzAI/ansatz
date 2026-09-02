@@ -83,8 +83,8 @@ def solve(params: dict, tag: str, ranks: int,
     p_um = {k: params[k] for k in RANGES_UM}
     p_int = {k: int(params[k]) for k in RANGES_INT}
     # N=4 modes so qubit + readout are robustly captured (see EM3D.md)
-    return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=4,
-                                   target_ghz=target_ghz))
+    return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=6,
+                                   target_ghz=target_ghz, max_size=60))
 
 
 def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
@@ -114,18 +114,28 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     solves.append(row)
     miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
     if miss > tol_mhz and row["f0"] is not None and row["f1"] is not None:
-        # one Newton step using a *linear-fit* Jacobian from campaign data
-        # (tree models are piecewise constant — finite differences are unusable)
-        jac = _linear_jacobian(feats)
-        resid = np.array([f0t - row["f0"], f1t - row["f1"]])
-        step, *_ = np.linalg.lstsq(jac, resid, rcond=None)
-        # trust region: at most 10% of each parameter's range per step
-        for j, k in enumerate(feats):
-            lo, hi = (RANGES_UM.get(k) or RANGES_INT[k])
-            cap = 0.10 * (hi - lo)
-            best[k] = float(np.clip(best[k] + np.clip(step[j], -cap, cap), lo, hi))
-        f0_hat = predict(models, feats, best)[0]
-        row = solve(best, "demo_ansatz_1", ranks, target_ghz=f0_hat - 0.15)
+        # physics-decoupled damped correction:
+        # quarter-wave resonator: f1 ~ 1/total_length  (measured corr -0.992)
+        damp = 0.8
+        tl = best["total_length"] * (1 + damp * (row["f1"] / f1t - 1.0))
+        lo, hi = RANGES_UM["total_length"]
+        best["total_length"] = float(np.clip(tl, lo, hi))
+        # qubit mode: local slope of f0 vs cap_length from campaign neighbors
+        import pandas as pd
+
+        df = pd.read_parquet(ROOT / "runs" / "em3d_dataset.parquet")
+        df = df[(df.ok == True) & (df.f0 > 3.2) & (df.f0 < 5.0)]  # noqa: E712
+        near = df.iloc[(df.cap_length - best["cap_length"]).abs().argsort()[:25]]
+        slope = np.polyfit(near.cap_length, near.f0, 1)[0]  # GHz/um
+        dcap = damp * (f0t - row["f0"]) / slope
+        lo, hi = RANGES_UM["cap_length"]
+        cap_tr = 0.10 * (hi - lo)
+        best["cap_length"] = float(np.clip(best["cap_length"] +
+                                           np.clip(dcap, -cap_tr, cap_tr), lo, hi))
+        # retarget comfortably below the expected qubit mode (close-but-not-
+        # too-close targets are where the lossy readout mode converges)
+        row = solve(best, "demo_ansatz_1", ranks,
+                    target_ghz=min(predict(models, feats, best)[0], row["f0"]) - 0.30)
         solves.append(row)
         miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
 
