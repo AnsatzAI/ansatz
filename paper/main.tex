@@ -360,6 +360,40 @@ the strong open-source baseline for these SPD systems, and sparse direct
 factorization is unbeatable at small scale --- both are therefore pipelines
 inside the router rather than external competitors.
 
+\section{The 3D program: verified inverse design (dev-scale results)}
+\label{sec:3d}
+
+The 2D verdict directed the learned components at the regime where classical
+solvers actually hurt: 3D full-wave analysis. We built the 3D backend on AWS
+Palace (curl-curl Maxwell eigenmodes; the shipped transmon+readout example
+reproduces its reference results on our hardware: 4.0991/5.6033\,GHz,
+$Q_0{=}18{,}553$, 207\,s on 6 ranks), generated our own training data --- no
+public dataset exists at this fidelity --- via a 101-solve overnight campaign
+over a parameterized DeviceLayout geometry family (pad length, junction gap,
+resonator length, claw length, meander count), and trained a forward model
+with leave-one-out validation: $f_0$ at 0.88\% MAPE (36\,MHz), $f_1$ at
+0.93\% (54\,MHz), $2.6$--$4\times$ better than $k$NN.
+
+Two measured failure modes of classical practice became features. First, the
+eigensolver \emph{target} is a correctness knob: targets above a mode skip it
+at $2.5$--$3\times$ the cost, and far-below targets silently drop the lossy
+readout mode ($Q\!\sim\!8$k fails to converge; 61\% of far-target campaign
+solves) --- prediction-informed targeting plus mode-completeness verification
+eliminates both. Second, correction steps require physics (quarter-wave
+scaling, local data-fit slopes with trust regions), not gradients of tree
+models.
+
+\paragraph{Advantage demonstration.} Task: hit
+$(f_q, f_r) = (4.20, 5.45)$\,GHz within 25\,MHz, final design verified by a
+full Palace solve, identical fidelity in both arms.
+\textbf{Ansatz}: surrogate inversion ($\mu$s) $\to$ verified solve $\to$ one
+damped physics correction $\to$ verified solve: \textbf{11.8\,MHz miss in 2
+solves, 34.9\,min}. \textbf{Classical} (Nelder-Mead over geometry, one full
+solve per evaluation, 12-solve budget): 269.7\,MHz miss in 215.6\,min ---
+tolerance never reached. The routed workflow is $6.2\times$ faster and
+$22.8\times$ closer to specification, and its answer \emph{is} a classical
+solve; the learned components only decided where to point it.
+
 \section{Limitations and roadmap}
 
 v0's field solver is 2D plan-view electrostatics: the right benchmark for

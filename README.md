@@ -33,10 +33,18 @@ benchmarks, and `paper/` for the technical report.
   more than 0.4% behind the best fixed choice on any instance.
 - **Zero verification failures in 5,930 measured solves.** In 2D, the router
   correctly learns that sparse direct dominates — the negative result for
-  neural pipelines is reported, not hidden. The 3D backend (where direct
-  factorization stops scaling) is the roadmap item that flips the ensemble.
+  neural pipelines is reported, not hidden.
+- **3D full-wave (AWS Palace backend, dev scale): verified inverse design
+  6.2× faster and 22.8× closer to spec than classical optimization.**
+  Target (4.20, 5.45) GHz hit within a verified 11.8 MHz in 2 Palace solves
+  (34.9 min) vs 269.7 MHz after 12 solves (215.6 min) for Nelder-Mead over
+  the same solver; training data from our own 101-solve overnight Palace
+  campaign (no public dataset exists at this fidelity). Prediction also sets
+  the eigensolver shift, fixing a silent missed-mode failure mode measured
+  in 61% of far-target solves.
 
-Full protocol and tables: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+Full protocol and tables: [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and
+[docs/EM3D.md](docs/EM3D.md).
 
 ## Install
 

@@ -60,13 +60,38 @@ family, order-1 elements miss the qubit mode entirely (17.7 s but f0 off by
 verified config on this family — the wall-clock win must come from the
 *design loop*, which motivates the advantage demo below.
 
-**3. Advantage demo (in progress).** Verified inverse design: hit target
-(f_qubit, f_readout) with the final design verified by a full Palace solve.
-Classical arm: Nelder-Mead over geometry, one full Palace solve per
-evaluation. Ansatz arm: Tier-1 surrogate inversion (microseconds) + one
-verification solve (+ at most one Jacobian correction). Both arms report
-end-to-end wall-clock and verified miss. See
-`scripts/em3d_advantage_demo.py`.
+**3. Advantage demo — MEASURED.** Verified inverse design: hit
+(f_qubit, f_readout) = (4.20, 5.45) GHz within 25 MHz, final design verified
+by a full Palace eigenmode solve in both arms, identical solver fidelity.
+
+| arm | wall-clock | Palace solves | verified miss | within tol? |
+|---|---|---|---|---|
+| **Ansatz** (surrogate inversion + verified solve + one physics correction) | **34.9 min** | **2** | **11.8 MHz** | **yes** |
+| Classical (Nelder-Mead over geometry, full solve per evaluation) | 215.6 min | 12 | 269.7 MHz | no |
+
+**6.2x faster and 22.8x closer to spec, with the classical arm failing to
+reach tolerance within its 12-solve budget.** The Ansatz arm's final answer
+is a real Palace solve — the surrogate only chose where to point it.
+
+Two robustness lessons became product features along the way:
+- **Prediction-informed eigensolver targeting.** The lossy readout mode
+  (Q ~ 8k) frequently fails to converge and silently drops from the output
+  when the shift target is far away (62/101 campaign solves at a fixed
+  far target) or too close to the qubit mode. Setting the target from the
+  predicted f0 (a few hundred MHz below), with N=6 and a larger Krylov
+  subspace, recovered it reliably — mode-completeness verification catches
+  any remaining dropouts.
+- **Correction steps need physics, not tree gradients.** Finite differences
+  on gradient-boosted trees are unusable (piecewise-constant); the working
+  correction is quarter-wave scaling for the resonator plus a local
+  data-fit slope for the pad, damped with a trust region.
+
+## Tier-1 3D forward model (bespoke data, LOO-validated)
+
+101 usable solves (12.9 h overnight campaign): f0 **0.88% MAPE / 36 MHz
+MAE**; f1 (39 clean-label rows) **0.93% / 54 MHz** — vs kNN at 2.3%/95 MHz
+and 3.6%/215 MHz. Physics sanity: corr(total_length, f1) = -0.992,
+corr(cap_length, f0) = -0.926.
 
 ## Bespoke data campaign
 
