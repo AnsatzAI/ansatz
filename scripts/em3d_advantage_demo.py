@@ -63,11 +63,13 @@ def _pick_modes(row: dict) -> dict:
     return row
 
 
-def solve(params: dict, tag: str, ranks: int) -> dict:
+def solve(params: dict, tag: str, ranks: int,
+          target_ghz: float = 3.0) -> dict:
     p_um = {k: params[k] for k in RANGES_UM}
     p_int = {k: int(params[k]) for k in RANGES_INT}
     # N=4 modes so qubit + readout are robustly captured (see EM3D.md)
-    return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=4))
+    return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=4,
+                                   target_ghz=target_ghz))
 
 
 def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
@@ -89,7 +91,11 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     t_predict = time.time() - t0
 
     solves = []
-    row = solve(best, "demo_ansatz_0", ranks)
+    # Tier-1-informed eigensolver target: just below the predicted qubit mode
+    # (shift-cliff: close-below targets find both modes reliably; far targets
+    # risk readout-mode convergence dropout)
+    f0_hat = predict(models, feats, best)[0]
+    row = solve(best, "demo_ansatz_0", ranks, target_ghz=f0_hat - 0.15)
     solves.append(row)
     miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
     if miss > tol_mhz:
@@ -108,7 +114,8 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
         for j, k in enumerate(feats):
             lo, hi = (RANGES_UM.get(k) or RANGES_INT[k])
             best[k] = float(np.clip(best[k] + step[j], lo, hi))
-        row = solve(best, "demo_ansatz_1", ranks)
+        f0_hat = predict(models, feats, best)[0]
+        row = solve(best, "demo_ansatz_1", ranks, target_ghz=f0_hat - 0.15)
         solves.append(row)
         miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
 
@@ -164,12 +171,17 @@ if __name__ == "__main__":
     f0t, f1t = (float(v) for v in a.targets.split(","))
 
     models, feats = load_model()
+    out_path = ROOT / "runs" / "em3d_advantage.json"
     out = {"targets": [f0t, f1t], "tol_mhz": a.tol_mhz}
+    if out_path.exists():  # preserve prior arms (e.g., classical) on partial reruns
+        prev = json.load(open(out_path))
+        if prev.get("targets") == out["targets"]:
+            out.update({k: v for k, v in prev.items() if k in ("classical", "ansatz")})
     out["ansatz"] = ansatz_arm(models, feats, f0t, f1t, a.tol_mhz, a.ranks)
     print(json.dumps(out["ansatz"], indent=2, default=str))
     if not a.skip_classical:
         out["classical"] = classical_arm(f0t, f1t, a.tol_mhz, a.ranks,
                                          a.max_classical_solves)
         print(json.dumps(out["classical"], indent=2, default=str))
-    with open(ROOT / "runs" / "em3d_advantage.json", "w") as f:
+    with open(out_path, "w") as f:
         json.dump(out, f, indent=2, default=str)
