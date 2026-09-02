@@ -51,6 +51,7 @@ def run_palace(
     proc = subprocess.run(
         [PALACE_BIN, "-np", str(ranks), str(config_path)],
         cwd=workdir, capture_output=True, text=True, timeout=timeout_s,
+        check=False,
     )
     t_wall = time.perf_counter() - t0
 

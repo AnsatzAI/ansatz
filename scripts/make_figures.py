@@ -41,7 +41,7 @@ LABEL = {
     "hints": "HINTS (fixed 1:16)",
     "routed": "Ansatz router",
 }
-GRID = dict(color="#e6e6e3", linewidth=0.8)
+GRID = {"color": "#e6e6e3", "linewidth": 0.8}
 plt.rcParams.update({
     "font.size": 10, "axes.edgecolor": "#c9c9c4", "axes.linewidth": 0.8,
     "axes.labelcolor": "#333", "xtick.color": "#555", "ytick.color": "#555",
@@ -368,14 +368,14 @@ def write_benchmarks_md(stats: dict) -> None:
         lines.append(f"| {n} | " + " | ".join(cells) + f" | {row['oracle']:.4f} |")
     lines += [
         "",
-        f"- Router within **{rev['routed_vs_oracle']:.3f}x** of the per-instance "
-        f"oracle overall; decision overhead {rev['decision_overhead_ms']:.3f} ms.",
-        f"- Overall speedup vs best fixed pipeline: "
+        (f"- Router within **{rev['routed_vs_oracle']:.3f}x** of the per-instance "
+        f"oracle overall; decision overhead {rev['decision_overhead_ms']:.3f} ms."),
+        (f"- Overall speedup vs best fixed pipeline: "
         f"**{stats['overall_speedup_vs_best_fixed']:.2f}x** "
         f"(worst per-instance ratio vs best fixed: "
-        f"{stats['worst_instance_ratio_vs_best_fixed']:.2f}).",
-        "- Verification failures across all benchmark cells: **0** "
-        "(every returned field meets tolerance; failures would fall back to direct).",
+        f"{stats['worst_instance_ratio_vs_best_fixed']:.2f})."),
+        ("- Verification failures across all benchmark cells: **0** "
+        "(every returned field meets tolerance; failures would fall back to direct)."),
         "",
         "Figures: `paper/figs/`. HINTS numbers are reported at n<=511 where its",
         "fixed schedule terminates within budget; it is dominated at every size.",

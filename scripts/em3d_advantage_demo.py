@@ -33,8 +33,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-
-from em3d_campaign import EX, RANGES_INT, RANGES_UM, run_variant
+from em3d_campaign import RANGES_INT, RANGES_UM, run_variant
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -45,7 +44,7 @@ def _linear_jacobian(feats):
     from sklearn.linear_model import LinearRegression
 
     df = pd.read_parquet(ROOT / "runs" / "em3d_dataset.parquet")
-    df = df[df.ok == True]  # noqa: E712
+    df = df[df.ok == True]
     jac = np.zeros((2, len(feats)))
     f0d = df[(df.f0 > 3.2) & (df.f0 < 5.0)]
     jac[0] = LinearRegression().fit(f0d[feats], f0d.f0).coef_
@@ -94,7 +93,7 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     grids.append(np.arange(RANGES_INT["n_meander_turns"][0],
                            RANGES_INT["n_meander_turns"][1] + 1))
     keys = list(RANGES_UM) + list(RANGES_INT)
-    best, best_err = None, np.inf
+    best, _best_err = None, np.inf
     names = list(RANGES_UM) + list(RANGES_INT)
     cand = np.array(list(itertools.product(*grids)))
     xs = cand[:, [names.index(k) for k in feats]]
@@ -124,7 +123,7 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
         import pandas as pd
 
         df = pd.read_parquet(ROOT / "runs" / "em3d_dataset.parquet")
-        df = df[(df.ok == True) & (df.f0 > 3.2) & (df.f0 < 5.0)]  # noqa: E712
+        df = df[(df.ok == True) & (df.f0 > 3.2) & (df.f0 < 5.0)]
         near = df.iloc[(df.cap_length - best["cap_length"]).abs().argsort()[:25]]
         slope = np.polyfit(near.cap_length, near.f0, 1)[0]  # GHz/um
         dcap = damp * (f0t - row["f0"]) / slope
@@ -139,11 +138,11 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
         solves.append(row)
         miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
 
-    return dict(
-        arm="ansatz", t_total=time.time() - t0, t_predict=t_predict,
-        n_solves=len(solves), miss_mhz=float(miss), design=best,
-        t_solves=[s.get("t_solve") for s in solves],
-    )
+    return {
+        "arm": "ansatz", "t_total": time.time() - t0, "t_predict": t_predict,
+        "n_solves": len(solves), "miss_mhz": float(miss), "design": best,
+        "t_solves": [s.get("t_solve") for s in solves],
+    }
 
 
 def classical_arm(f0t, f1t, tol_mhz, ranks, max_solves=12) -> dict:
@@ -174,10 +173,10 @@ def classical_arm(f0t, f1t, tol_mhz, ranks, max_solves=12) -> dict:
 
     minimize(objective, np.zeros(len(keys)), method="Nelder-Mead",
              options={"maxfev": max_solves, "xatol": 1e-3, "fatol": 1e-4})
-    return dict(
-        arm="classical", t_total=time.time() - t0, n_solves=count[0],
-        miss_mhz=float(best["err"] * 1e3), design=best["x"],
-    )
+    return {
+        "arm": "classical", "t_total": time.time() - t0, "n_solves": count[0],
+        "miss_mhz": float(best["err"] * 1e3), "design": best["x"],
+    }
 
 
 if __name__ == "__main__":
@@ -194,7 +193,8 @@ if __name__ == "__main__":
     out_path = ROOT / "runs" / "em3d_advantage.json"
     out = {"targets": [f0t, f1t], "tol_mhz": a.tol_mhz}
     if out_path.exists():  # preserve prior arms (e.g., classical) on partial reruns
-        prev = json.load(open(out_path))
+        with open(out_path) as _f:
+            prev = json.load(_f)
         if prev.get("targets") == out["targets"]:
             out.update({k: v for k, v in prev.items() if k in ("classical", "ansatz")})
     out["ansatz"] = ansatz_arm(models, feats, f0t, f1t, a.tol_mhz, a.ranks)

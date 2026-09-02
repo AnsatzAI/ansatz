@@ -55,13 +55,13 @@ def generate(split: str, m: int, seed: int, n: int, ranges=None, shard_size: int
     for i, d in enumerate(designs):
         conductors, ground, fields = solve_design(d, n)
         shard.append(
-            dict(
-                cross=pack(conductors[0]),
-                claw=pack(conductors[1]),
-                ground=pack(ground),
-                u_cross=fields[0],
-                u_claw=fields[1],
-            )
+            {
+                "cross": pack(conductors[0]),
+                "claw": pack(conductors[1]),
+                "ground": pack(ground),
+                "u_cross": fields[0],
+                "u_claw": fields[1],
+            }
         )
         meta.append([getattr(d, k) for k in PARAM_KEYS])
         if len(shard) == shard_size or i == m - 1:

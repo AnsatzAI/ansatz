@@ -42,7 +42,7 @@ def main() -> None:
                 if isinstance(v, (int, float)):
                     rec[f"sim_{k}"] = float(v)
             rows.append(rec)
-        except Exception:
+        except Exception:  # noqa: BLE001, S112 — skip malformed rows
             continue
     flat = pd.DataFrame(rows).dropna(axis=1, how="all")
     print("flat columns:", list(flat.columns))

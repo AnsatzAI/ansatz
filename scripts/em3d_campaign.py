@@ -75,7 +75,7 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
     gen = subprocess.run(
         ["julia", "--project", str(ROOT / "scripts" / "gen_variant.jl"),
          str(spec_path)],
-        cwd=EX, capture_output=True, text=True, timeout=1800,
+        cwd=EX, capture_output=True, text=True, timeout=1800, check=False,
     )
     t_mesh = time.perf_counter() - t0
     if gen.returncode != 0 or "GENERATED" not in gen.stdout:

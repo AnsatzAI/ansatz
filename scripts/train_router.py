@@ -53,7 +53,6 @@ def main(train_paths, eval_paths, out_dir):
     ev, _ = pivot(load_frames(eval_paths))
     core = [p for p in avail if p != "hints" and p in ev.columns]
     ev = ev.dropna(subset=core).reset_index(drop=True)
-    results = {}
     X = ev[feat_cols].values.astype(np.float32)
 
     # single-solve mode overhead (honest per-call cost)

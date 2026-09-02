@@ -36,7 +36,7 @@ def main() -> None:
         "f1": df[(df.f1 > 4.2) & (df.f1 < 7.6)].reset_index(drop=True),
     }
     print({k: len(v) for k, v in sets.items()}, "usable solves")
-    results = {"n": {k: int(len(v)) for k, v in sets.items()}}
+    results = {"n": {k: len(v) for k, v in sets.items()}}
 
     for tgt in TARGETS:
         sub = sets[tgt]

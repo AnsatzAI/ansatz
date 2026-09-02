@@ -39,7 +39,7 @@ def main(weights: str, data: str = "data/fields"):
             ds = FieldShards(data, "test", n)
 
             for i in range(min(80, len(ds))):
-                x, y, free = ds[i]
+                x, y, _free = ds[i]
                 fixedm = x[1].numpy().astype(bool)
                 p = LaplaceProblem(n=n, fixed_mask=fixedm,
                                    fixed_values=x[0].numpy().astype(np.float64))

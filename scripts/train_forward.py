@@ -79,7 +79,7 @@ def run_split(df, train_idx, test_idx, tag, results):
 
     preds = {name: (m.predict(sc.transform(xte)) if "nn" in name or "knn" in name
                     else m.predict(xte))
-             for name, m in models.items()}
+             for name, m in models.items()}  # noqa: PLC0206
     preds["gbr"] = np.stack([g.predict(xte) for g in gbr], axis=1)
 
     for name, p in preds.items():
