@@ -39,6 +39,21 @@ from em3d_campaign import EX, RANGES_INT, RANGES_UM, run_variant
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _linear_jacobian(feats):
+    """d(f0,f1)/d(params) from global linear fits on the campaign data."""
+    import pandas as pd
+    from sklearn.linear_model import LinearRegression
+
+    df = pd.read_parquet(ROOT / "runs" / "em3d_dataset.parquet")
+    df = df[df.ok == True]  # noqa: E712
+    jac = np.zeros((2, len(feats)))
+    f0d = df[(df.f0 > 3.2) & (df.f0 < 5.0)]
+    jac[0] = LinearRegression().fit(f0d[feats], f0d.f0).coef_
+    f1d = df[(df.f1 > 4.2) & (df.f1 < 7.6)]
+    jac[1] = LinearRegression().fit(f1d[feats], f1d.f1).coef_
+    return jac
+
+
 def load_model():
     with open(ROOT / "runs" / "em3d_forward.pkl", "rb") as f:
         d = pickle.load(f)
@@ -98,22 +113,17 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     row = solve(best, "demo_ansatz_0", ranks, target_ghz=f0_hat - 0.15)
     solves.append(row)
     miss = np.hypot((row["f0"] or 9) - f0t, (row["f1"] or 9) - f1t) * 1e3
-    if miss > tol_mhz:
-        # one linear correction via finite-difference Jacobian of the model
-        x = np.array([best[k] for k in feats])
-        jac = np.zeros((2, len(feats)))
-        eps = np.array([1.0 if k != "n_meander_turns" else 1 for k in feats])
-        for j in range(len(feats)):
-            xp = x.copy(); xp[j] += eps[j]
-            f0p = models["f0"].predict(xp[None])[0]
-            f1p = models["f1"].predict(xp[None])[0]
-            jac[:, j] = [(f0p - predict(models, feats, best)[0]) / eps[j],
-                         (f1p - predict(models, feats, best)[1]) / eps[j]]
+    if miss > tol_mhz and row["f0"] is not None and row["f1"] is not None:
+        # one Newton step using a *linear-fit* Jacobian from campaign data
+        # (tree models are piecewise constant — finite differences are unusable)
+        jac = _linear_jacobian(feats)
         resid = np.array([f0t - row["f0"], f1t - row["f1"]])
         step, *_ = np.linalg.lstsq(jac, resid, rcond=None)
+        # trust region: at most 10% of each parameter's range per step
         for j, k in enumerate(feats):
             lo, hi = (RANGES_UM.get(k) or RANGES_INT[k])
-            best[k] = float(np.clip(best[k] + step[j], lo, hi))
+            cap = 0.10 * (hi - lo)
+            best[k] = float(np.clip(best[k] + np.clip(step[j], -cap, cap), lo, hi))
         f0_hat = predict(models, feats, best)[0]
         row = solve(best, "demo_ansatz_1", ranks, target_ghz=f0_hat - 0.15)
         solves.append(row)
