@@ -62,7 +62,9 @@ def identify_modes(freqs: list[float]) -> dict | None:
 
 def run_variant_two(tag: str, p: dict, ranks: int,
                     solver_order: int = 2, amr_iterations: int = 0,
-                    target_ghz: float = 3.0, timeout_s: float = 7200.0) -> dict:
+                    target_ghz: float = 3.0, timeout_s: float = 7200.0,
+                    n_modes: int | None = None, max_size: int | None = None,
+                    tol: float | None = None) -> dict:
     spec = {"tag": tag, "solver_order": solver_order,
             "amr_iterations": amr_iterations,
             "params_um": p, "params_int": {"n_meander_turns": 5}}
@@ -80,7 +82,8 @@ def run_variant_two(tag: str, p: dict, ranks: int,
                     err=(gen.stderr or gen.stdout)[-500:], **p)
 
     cfg = load_config(EX / f"ansatz_{tag}.json")
-    cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=target_ghz)
+    cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=target_ghz,
+                       n_modes=n_modes, max_size=max_size, tol=tol)
     cfg_path = write_config(cfg, EX / f"ansatz_{tag}.json")
     res = run_palace(cfg_path, ranks=ranks, timeout_s=timeout_s)
     modes = identify_modes(res.freqs_ghz) if res.returncode == 0 else None
@@ -106,7 +109,10 @@ def main(n: int, ranks: int, seed: int) -> None:
         p = sample_params2(rng)
         if tag in done:
             continue
-        row = run_variant_two(tag, p, ranks)
+        # campaign labels: cheaper eigensolver settings (frequencies are
+        # converged well before 1e-8; demos verify at strict settings)
+        row = run_variant_two(tag, p, ranks, target_ghz=3.4,
+                              n_modes=6, max_size=60, tol=1e-6)
         df = pd.DataFrame([row])
         if OUT.exists():
             df = pd.concat([pd.read_parquet(OUT), df], ignore_index=True)
