@@ -66,8 +66,13 @@ def append(row: dict) -> None:
 def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
                 n_modes: int | None = None,
                 target_ghz: float = 3.0,
-                max_size: int | None = None) -> dict:
-    spec = {"tag": tag, "solver_order": 2, "params_um": p_um, "params_int": p_int}
+                max_size: int | None = None,
+                solver_order: int = 2,
+                amr_iterations: int = 0,
+                timeout_s: float = 3600.0) -> dict:
+    spec = {"tag": tag, "solver_order": solver_order,
+            "amr_iterations": amr_iterations,
+            "params_um": p_um, "params_int": p_int}
     spec_path = EX / f"spec_{tag}.json"
     spec_path.write_text(json.dumps(spec))
 
@@ -89,10 +94,11 @@ def run_variant(tag: str, p_um: dict, p_int: dict, ranks: int,
     cfg = make_variant(cfg, f"postpro/ansatz/{tag}", target_ghz=target_ghz,
                        n_modes=n_modes, max_size=max_size)
     cfg_path = write_config(cfg, EX / f"ansatz_{tag}.json")
-    res = run_palace(cfg_path, ranks=ranks)
+    res = run_palace(cfg_path, ranks=ranks, timeout_s=timeout_s)
     row = dict(
         tag=tag, ok=(res.returncode == 0 and len(res.freqs_ghz) > 0),
         stage="solve", t_mesh=t_mesh, t_solve=res.t_wall,
+        solver_order=solver_order, amr_iterations=amr_iterations,
         f0=res.freqs_ghz[0] if res.freqs_ghz else None,
         f1=res.freqs_ghz[1] if len(res.freqs_ghz) > 1 else None,
         q0=res.q_factors[0] if res.q_factors else None,

@@ -27,6 +27,7 @@ function main(spec_path::AbstractString)
         mesh_filename = "$(tag).msh2",
         config_filename = "ansatz_$(tag).json",
         solver_order = get(spec, "solver_order", 2),
+        amr_iterations = get(spec, "amr_iterations", 0),
         kwargs...,
     )
     println("GENERATED $(tag)")
