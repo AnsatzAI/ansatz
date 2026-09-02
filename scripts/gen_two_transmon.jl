@@ -97,8 +97,7 @@ function two_transmon(;
     render!(floorplan.coordinate_system, chip, LayerVocabulary.CHIP_AREA)
     check!(floorplan)
 
-    groups = ["port_1", "port_2", "lumped_element", "lumped_element_1",
-              "lumped_element_2"]
+    groups = ["port_1", "port_2", "lumped_element_1", "lumped_element_2"]
     tech = ExamplePDK.singlechip_solidmodel_target(groups...)
     sm = SolidModel("two_transmon", overwrite=true)
     SolidModels.set_gmsh_option("General.Verbosity", 1)
