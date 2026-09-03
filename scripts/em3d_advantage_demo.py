@@ -61,7 +61,9 @@ def load_model():
 
 def predict(models, feats, params: dict) -> tuple[float, float]:
     x = np.array([[params[k] for k in feats]])
-    return float(models["f0"].predict(x)[0]), float(models["f1"].predict(x)[0])
+    f0 = _apply_delta("f0", x[0], float(models["f0"].predict(x)[0]))
+    f1 = _apply_delta("f1", x[0], float(models["f1"].predict(x)[0]))
+    return f0, f1
 
 
 def _pick_modes(row: dict) -> dict:
@@ -77,13 +79,27 @@ def _pick_modes(row: dict) -> dict:
     return row
 
 
+FIDELITY = {"solver_order": 2, "amr_iterations": 0, "timeout_s": 3600.0}
+DELTA = None  # multi-fidelity correction models (runs/em3d_delta.pkl)
+
+
+def _apply_delta(tgt: str, x_row: np.ndarray, base: float) -> float:
+    if not DELTA or tgt not in DELTA:
+        return base
+    kind, model = DELTA[tgt]
+    if kind == "const":
+        return base + model
+    return base + float(model.predict(x_row[None])[0])
+
+
 def solve(params: dict, tag: str, ranks: int,
           target_ghz: float = 3.0) -> dict:
     p_um = {k: params[k] for k in RANGES_UM}
     p_int = {k: int(params[k]) for k in RANGES_INT}
-    # N=4 modes so qubit + readout are robustly captured (see EM3D.md)
+    # N=6 modes + larger subspace so qubit + readout are robustly captured
     return _pick_modes(run_variant(tag, p_um, p_int, ranks, n_modes=6,
-                                   target_ghz=target_ghz, max_size=60))
+                                   target_ghz=target_ghz, max_size=60,
+                                   **FIDELITY))
 
 
 def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
@@ -99,6 +115,11 @@ def ansatz_arm(models, feats, f0t, f1t, tol_mhz, ranks) -> dict:
     xs = cand[:, [names.index(k) for k in feats]]
     p0 = models["f0"].predict(xs)
     p1 = models["f1"].predict(xs)
+    if DELTA:
+        for tgt, arr in (("f0", p0), ("f1", p1)):
+            if tgt in DELTA:
+                kind, model = DELTA[tgt]
+                arr += model if kind == "const" else model.predict(xs)
     err = np.hypot(p0 - f0t, p1 - f1t)
     i = int(np.argmin(err))
     best = dict(zip(keys, cand[i]))
@@ -186,11 +207,18 @@ if __name__ == "__main__":
     ap.add_argument("--ranks", type=int, default=6)
     ap.add_argument("--max-classical-solves", type=int, default=12)
     ap.add_argument("--skip-classical", action="store_true")
+    ap.add_argument("--fine", action="store_true",
+                    help="production fidelity: order 3 + AMR 2 + delta model")
+    ap.add_argument("--out-name", default="em3d_advantage.json")
     a = ap.parse_args()
+    if a.fine:
+        FIDELITY.update(solver_order=3, amr_iterations=2, timeout_s=14400.0)
+        with open(ROOT / "runs" / "em3d_delta.pkl", "rb") as f:
+            DELTA = pickle.load(f)
     f0t, f1t = (float(v) for v in a.targets.split(","))
 
     models, feats = load_model()
-    out_path = ROOT / "runs" / "em3d_advantage.json"
+    out_path = ROOT / "runs" / a.out_name
     out = {"targets": [f0t, f1t], "tol_mhz": a.tol_mhz}
     if out_path.exists():  # preserve prior arms (e.g., classical) on partial reruns
         with open(out_path) as _f:
