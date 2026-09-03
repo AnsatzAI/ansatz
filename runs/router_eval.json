@@ -1,0 +1,101 @@
+{
+  "n_eval": 450,
+  "decision_overhead_ms": 0.011289906655696945,
+  "decision_overhead_single_ms": 0.6246858200756833,
+  "routed_total_s": 29.823386286894678,
+  "oracle_total_s": 29.81830582889961,
+  "routed_vs_oracle": 1.0001703805046545,
+  "oracle_agreement": 1.0,
+  "pipelines": {
+    "direct": {
+      "total_s": 29.81830582889961,
+      "routed_speedup_total": 0.9998296485199167,
+      "routed_speedup_geomean": 0.9987987690750681,
+      "win_rate": 0.0,
+      "within_5pct_or_better": 1.0,
+      "worst_case_ratio": 1.0038521139979277
+    },
+    "amg_cg": {
+      "total_s": 47.066392384927894,
+      "routed_speedup_total": 1.5781706320053377,
+      "routed_speedup_geomean": 2.137764100773098,
+      "win_rate": 1.0,
+      "within_5pct_or_better": 1.0,
+      "worst_case_ratio": 0.8119754594303155
+    },
+    "surr_cg": {
+      "total_s": 1396.9097449727778,
+      "routed_speedup_total": 46.83940755535944,
+      "routed_speedup_geomean": 23.11793290471655,
+      "win_rate": 1.0,
+      "within_5pct_or_better": 1.0,
+      "worst_case_ratio": 0.09544576806299661
+    },
+    "surr_mgcg": {
+      "total_s": 861.2514436999991,
+      "routed_speedup_total": 28.878392125392537,
+      "routed_speedup_geomean": 30.03330713537603,
+      "win_rate": 1.0,
+      "within_5pct_or_better": 1.0,
+      "worst_case_ratio": 0.06469086358784054
+    },
+    "surr_amg": {
+      "total_s": 72.50561545699748,
+      "routed_speedup_total": 2.431166426223661,
+      "routed_speedup_geomean": 4.86940813762862,
+      "win_rate": 1.0,
+      "within_5pct_or_better": 1.0,
+      "worst_case_ratio": 0.6838018798585112
+    }
+  },
+  "by_n": {
+    "255": {
+      "routed_total_s": 1.0308119743139188,
+      "direct": 1.0285539929827792,
+      "amg_cg": 2.8374975429687765,
+      "surr_cg": 16.76087817291409,
+      "surr_mgcg": 28.674859041013406,
+      "surr_amg": 8.006793449996621,
+      "hints": 942.1859612809421,
+      "router_choices": {
+        "direct": 200
+      }
+    },
+    "511": {
+      "routed_total_s": 1.9776238676171896,
+      "direct": 1.9764948769516195,
+      "amg_cg": 3.9761203820089577,
+      "surr_cg": 41.689670419014874,
+      "surr_mgcg": 64.58013403301447,
+      "surr_amg": 10.569898705936794,
+      "hints": 1988.9862797499736,
+      "router_choices": {
+        "direct": 100
+      }
+    },
+    "1023": {
+      "routed_total_s": 11.78154057877449,
+      "direct": 11.780185789975803,
+      "amg_cg": 19.016431958938483,
+      "surr_cg": 375.7509525889036,
+      "surr_mgcg": 341.06214616898797,
+      "surr_amg": 28.779833091044566,
+      "hints": 0.0,
+      "router_choices": {
+        "direct": 120
+      }
+    },
+    "2047": {
+      "routed_total_s": 15.033409866189078,
+      "direct": 15.033071168989409,
+      "amg_cg": 21.236342501011677,
+      "surr_cg": 962.7082437919453,
+      "surr_mgcg": 426.9343044569832,
+      "surr_amg": 25.149090210019494,
+      "hints": 0.0,
+      "router_choices": {
+        "direct": 30
+      }
+    }
+  }
+}

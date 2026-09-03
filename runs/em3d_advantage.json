@@ -1,0 +1,38 @@
+{
+  "targets": [
+    4.2,
+    5.45
+  ],
+  "tol_mhz": 25.0,
+  "ansatz": {
+    "arm": "ansatz",
+    "t_total": 2095.5702431201935,
+    "t_predict": 0.9408249855041504,
+    "n_solves": 2,
+    "miss_mhz": 11.81535929828788,
+    "design": {
+      "cap_length": 565.1363916538645,
+      "cap_gap": 24.347826086956523,
+      "total_length": 5211.776631384176,
+      "l_claw": 105.21739130434783,
+      "n_meander_turns": 5.0
+    },
+    "t_solves": [
+      715.9455657080107,
+      1314.487908375013
+    ]
+  },
+  "classical": {
+    "arm": "classical",
+    "t_total": 12938.742992162704,
+    "n_solves": 12,
+    "miss_mhz": 269.7326091872687,
+    "design": {
+      "cap_length": 625.0,
+      "cap_gap": 30.0,
+      "total_length": 4900.0,
+      "l_claw": 125.00437499997722,
+      "n_meander_turns": 5.0
+    }
+  }
+}

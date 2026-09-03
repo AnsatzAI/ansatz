@@ -50,9 +50,9 @@ def worst_miss_mhz(meas: dict, targets: dict) -> float:
     return max(abs((meas[t] or 99.0) - targets[t]) for t in TARGET_KEYS) * 1e3
 
 
-def ansatz_arm(models, feats, targets, tol_mhz, ranks) -> dict:
+def ansatz_arm(models, feats, targets, tol_mhz, ranks, seed: int = 0) -> dict:
     t0 = time.time()
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(seed)
     cand = [sample_params2(rng) for _ in range(200_000)]
     xs = np.array([[c[k] for k in feats] for c in cand])
     errs = np.zeros(len(cand))
@@ -143,11 +143,13 @@ if __name__ == "__main__":
     ap.add_argument("--max-classical-solves", type=int, default=10)
     ap.add_argument("--skip-classical", action="store_true")
     ap.add_argument("--skip-ansatz", action="store_true")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--out-name", default="em3d_two_advantage.json")
     a = ap.parse_args()
     tvals = [float(v) for v in a.targets.split(",")]
     targets = dict(zip(TARGET_KEYS, tvals))
 
-    out_path = ROOT / "runs" / "em3d_two_advantage.json"
+    out_path = ROOT / "runs" / a.out_name
     out = {"targets": targets, "tol_mhz": a.tol_mhz}
     if out_path.exists():
         with open(out_path) as f:
@@ -157,7 +159,8 @@ if __name__ == "__main__":
                         if k in ("classical", "ansatz")})
     models, feats = load_model()
     if not a.skip_ansatz:
-        out["ansatz"] = ansatz_arm(models, feats, targets, a.tol_mhz, a.ranks)
+        out["ansatz"] = ansatz_arm(models, feats, targets, a.tol_mhz, a.ranks,
+                                   seed=a.seed)
         print(json.dumps(out["ansatz"], indent=2, default=str))
     if not a.skip_classical:
         out["classical"] = classical_arm(targets, a.tol_mhz, a.ranks,
