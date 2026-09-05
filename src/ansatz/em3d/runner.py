@@ -48,11 +48,20 @@ def run_palace(
     config_path = Path(config_path)
     workdir = Path(workdir) if workdir else config_path.parent
     t0 = time.perf_counter()
-    proc = subprocess.run(
-        [PALACE_BIN, "-np", str(ranks), str(config_path)],
-        cwd=workdir, capture_output=True, text=True, timeout=timeout_s,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            [PALACE_BIN, "-np", str(ranks), str(config_path)],
+            cwd=workdir, capture_output=True, text=True, timeout=timeout_s,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as e:
+        # a solve that blows its budget is a failed evaluation, not a crash
+        t_wall = time.perf_counter() - t0
+        log = (e.stdout or b"").decode(errors="ignore") if isinstance(e.stdout, bytes) \
+            else (e.stdout or "")
+        return PalaceResult(t_wall=t_wall, returncode=-9, freqs_ghz=[], q_factors=[],
+                            n_dof=None, log_tail=f"TIMEOUT after {timeout_s:.0f}s\n"
+                            + log[-1500:], out_dir="")
     t_wall = time.perf_counter() - t0
 
     log = proc.stdout + "\n" + proc.stderr
