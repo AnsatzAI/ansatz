@@ -1,0 +1,132 @@
+{
+  "targets": {
+    "f_q1": 4.0,
+    "f_q2": 4.35,
+    "f_r1": 5.45,
+    "f_r2": 6.4
+  },
+  "tol_mhz": 40.0,
+  "task": "two-qubit unit cell frequency planning (8 params, 4 modes)",
+  "fidelity": "coarse tier: order 2, no AMR, N=6, MaxSize 60, Tol 1e-6 labels / strict verify N=8",
+  "ansatz": {
+    "arm": "ansatz",
+    "n_solves": 2,
+    "reconstructed": true,
+    "t_total_s": 4405.466384,
+    "solve_misses_mhz": [
+      121.18565414199978,
+      41.87089593700044
+    ],
+    "worst_miss_mhz": 41.87089593700044,
+    "measured": {
+      "f_q1": 4.041870895937,
+      "f_q2": 4.363126323822,
+      "f_r1": 5.468955264168,
+      "f_r2": 6.380293048584
+    },
+    "within_tol": false
+  },
+  "classical": {
+    "arm": "classical",
+    "reconstructed": true,
+    "n_solves_completed": 8,
+    "n_solves_budget": 10,
+    "terminated": "solve 8 exceeded 2h per-solve timeout; demo crashed (now handled as failed eval)",
+    "best_worst_miss_mhz": 54.01442869399986,
+    "best_solve_index": 4,
+    "t_to_best_s": 13079.820291,
+    "t_to_solve6_clean_s": 19639.60112,
+    "timing_caveat": "solves 7-8 wall-clock contaminated by system sleep (caffeinate -i does not block lid/explicit sleep); solves 0-6 clean",
+    "within_tol": false,
+    "solves": [
+      {
+        "i": 0,
+        "worst_miss_mhz": 55.60275151199967,
+        "done_at": "2026-09-03T18:28:32.974978",
+        "measured": {
+          "f_q1": 3.964921127991,
+          "f_q2": 4.403275276397,
+          "f_r1": 5.505602751512,
+          "f_r2": 6.41977833907
+        }
+      },
+      {
+        "i": 1,
+        "worst_miss_mhz": 70.97207467599986,
+        "done_at": "2026-09-03T19:09:44.645663",
+        "measured": {
+          "f_q1": 3.949951813196,
+          "f_q2": 4.404287378244,
+          "f_r1": 5.520972074676,
+          "f_r2": 6.448780752451
+        }
+      },
+      {
+        "i": 2,
+        "worst_miss_mhz": 65.05646031799995,
+        "done_at": "2026-09-03T19:49:41.675781",
+        "measured": {
+          "f_q1": 3.96492876138,
+          "f_q2": 4.408172116781,
+          "f_r1": 5.515056460318,
+          "f_r2": 6.420474392237
+        }
+      },
+      {
+        "i": 3,
+        "worst_miss_mhz": 86.02905931800021,
+        "done_at": "2026-09-03T20:32:58.304594",
+        "measured": {
+          "f_q1": 3.95542701184,
+          "f_q2": 4.40414903335,
+          "f_r1": 5.536029059318,
+          "f_r2": 6.41735343263
+        }
+      },
+      {
+        "i": 4,
+        "worst_miss_mhz": 54.01442869399986,
+        "done_at": "2026-09-03T21:14:17.286675",
+        "measured": {
+          "f_q1": 3.945985571306,
+          "f_q2": 4.402861284007,
+          "f_r1": 5.495618398251,
+          "f_r2": 6.423432536012
+        }
+      },
+      {
+        "i": 5,
+        "worst_miss_mhz": 69.69557810900007,
+        "done_at": "2026-09-03T22:22:27.109453",
+        "measured": {
+          "f_q1": 3.934694529047,
+          "f_q2": 4.403205190904,
+          "f_r1": 5.519695578109,
+          "f_r2": 6.421887857962
+        }
+      },
+      {
+        "i": 6,
+        "worst_miss_mhz": 58.85247136799965,
+        "done_at": "2026-09-03T23:03:37.067504",
+        "measured": {
+          "f_q1": 3.964921379507,
+          "f_q2": 4.398363713615,
+          "f_r1": 5.508852471368,
+          "f_r2": 6.443202103649
+        }
+      },
+      {
+        "i": 7,
+        "worst_miss_mhz": 72.67448740199978,
+        "done_at": "2026-09-04T04:46:19.611281",
+        "measured": {
+          "f_q1": 3.951467203456,
+          "f_q2": 4.403275093466,
+          "f_r1": 5.522674487402,
+          "f_r2": 6.421118198779
+        }
+      }
+    ]
+  }
+}
