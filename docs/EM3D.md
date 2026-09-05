@@ -112,3 +112,53 @@ Q factors, mesh/solve wall-clock. Resumable by tag.
   (est. $100s–low $1,000s per campaign), or university cluster time.
   Geometry-swept training-set generation (DeviceLayout.jl / SQDMetal
   parameterizations) belongs to this tier as well.
+
+## Rung 2 — two-qubit unit cell: verified frequency planning (MEASURED, dev tier)
+
+**Task.** Two transmons with claw-coupled quarter-wave readouts on one shared
+feedline (DeviceLayout `TwoTransmon`, `scripts/gen_two_transmon.jl`); eight
+free geometry parameters (two pad lengths, two junction gaps, two resonator
+lengths, two claw lengths); spec = four mode targets
+(f_q1, f_q2, f_r1, f_r2) = (4.00, 4.35, 5.45, 6.40) GHz, success = worst
+per-mode miss <= 40 MHz, decided by a full Palace eigenmode solve.
+
+**Data.** 40-variant bespoke campaign (label tier: order 2, N=6, MaxSize 60,
+Tol 1e-6), 40/40 solves with all four modes captured, 17.9 h on 6 laptop
+ranks. Forward model (GBR, leave-one-out): f_q1 45.7, f_q2 36.2, f_r1 30.0,
+f_r2 43.9 MHz MAE (kNN: 106/88/75/137 MHz).
+
+**Demo (reconstructed from per-solve outputs after a crash on the classical
+arm's 9th solve, see caveats).**
+
+| arm | solves | wall-clock | worst miss | within 40 MHz? |
+|---|---|---|---|---|
+| Ansatz: model inversion -> verify -> one physics correction -> verify | 2 | 73 min | 121 -> **42 MHz** | no (by 2 MHz) |
+| Classical: Nelder-Mead over 8 params, one full solve per evaluation | 8 completed of 10 | 218 min to best | **54 MHz** (solve 4); sequence 56, 71, 65, 86, 54, 70, 59, 73 | no |
+
+Read honestly: neither arm reached the 40 MHz tolerance; Ansatz got 22%
+closer than classical's best using a quarter of the solves and a third of the
+time, and its first verified solve already beat six of eight classical
+evaluations. The 40 MHz tolerance sits at the forward model's own LOO error,
+so a single correction landing at 42 MHz is what the model quality predicts;
+a second correction (3 solves) is the obvious follow-up and is queued as an
+ablation rather than folded into this number.
+
+**Caveats.** (1) The demo JSON was reconstructed from `eig.csv` files and file
+timestamps because the classical arm's 9th solve exceeded a 2 h per-solve
+timeout and the script crashed (timeouts are now failed evaluations, not
+crashes). (2) The laptop entered system sleep repeatedly from the evening of
+Sep 3 (`caffeinate -i` does not block lid/explicit sleep), so wall-clock for
+classical solves 7-8 and for everything after is contaminated; solves 0-6
+are clean (~40 min each). `caffeinate -s` is now held for the rest of the
+run. (3) One target set, one seed, coarse fidelity.
+
+**What this does and does not show.** The Ansatz arm is, mechanically, a
+learned *initializer* plus a model/physics *update rule* plus one
+prediction-informed *solver setting*; the classical arm is cold-started and
+uses a derivative-free update, so the measured gap has multiple causes.
+The ablation ladder that isolates them (same task, same solver):
+cold+Nelder-Mead (done) | model-init+Nelder-Mead | model-init+physics
+correction (done) | cold+physics correction — is queued after Rung 1.
+The genuine 3D form of *routing* is per-iteration fidelity selection (coarse
+solves while far from spec, one sign-off solve to verify), which Rung 1's
+multi-fidelity delta model enables and which is the next build.
